@@ -171,8 +171,8 @@ try {
   check('E near a lantern deposits; 5 fireflies light it (+100)', firstDep && firstDep.after.lit === firstDep.before.lit + 1 && firstDep.after.c === firstDep.before.c - 5 && firstDep.before.hint.startsWith('Nhấn E'),
     firstDep ? `hint "${firstDep.before.hint}", carried ${firstDep.before.c}→${firstDep.after.c}, lit ${firstDep.before.lit}→${firstDep.after.lit}` : 'no deposit');
   check('Bóng Mực appear and chase', sawShade, 'shades seen during play');
-  check('F pulse costs 1 firefly and stuns nearby Bóng Mực', firstPulse && firstPulse.after.c === firstPulse.before.c - 1 && firstPulse.after.S.some((x) => x.st === 'stunned'),
-    firstPulse ? `carried ${firstPulse.before.c}→${firstPulse.after.c}, states ${firstPulse.after.S.map((x) => x.st).join(',')}` : 'no pulse happened (no shade came close)');
+  // checked at the end (a fallback may navigate away); PLAYTEST_FORCE_PULSE_FALLBACK=1 exercises the fallback path
+  const firstPulseInPlay = process.env.PLAYTEST_FORCE_PULSE_FALLBACK ? null : firstPulse;
   await sleep(1500); s = await state(); await shot('06-end-win');
   check('Lighting all lanterns of Night 1 wins and shows the end screen', s.st === 'won' && s.overlay && s.card.includes('Đảo đã sáng lại'), `result ${JSON.stringify(s.res)}, score ${s.score}, card "${s.card}"`);
   winBonusCheck('Win bonus matches README scoring', winDep);
@@ -215,6 +215,20 @@ try {
     await clickEl('next'); await sleep(800); s = await state(); await shot('p4-campaign-night2');
     check('P4-4 "Sang Đêm 2" after winning Night 1 starts Night 2', won1 && s.st === 'playing' && s.L.length === 6 && s.hud.startsWith('2 |'), `won night 1: ${won1}; now HUD: ${s.hud}`);
   }
+  let pulseEv = firstPulseInPlay, pulseHow = 'during play';
+  if (!pulseEv) {
+    // no shade came close in this (randomly seeded) game: check the pulse deterministically instead —
+    // preset with two shades near the player, 2 fireflies in the bag, then the real F key
+    pulseHow = 'preset ?shade (no shade came close during play)';
+    await send('Page.navigate', { url: `http://localhost:${webPort}/?autostart&shade&seed=5` }); await sleep(2000);
+    await ev('(() => { window.__game().player.carried = 2; })()');
+    await sleep(600); const before = await state(); await tap('KeyF'); await sleep(150); const after = await state();
+    pulseEv = { before, after };
+    await shot('04-pulse');
+    await send('Page.navigate', { url: `http://localhost:${webPort}/` }); await sleep(2500);
+  }
+  check('F pulse costs 1 firefly and stuns nearby Bóng Mực', pulseEv && pulseEv.after.c === pulseEv.before.c - 1 && pulseEv.after.S.some((x) => x.st === 'stunned'),
+    pulseEv ? `${pulseHow}: carried ${pulseEv.before.c}→${pulseEv.after.c}, states ${pulseEv.after.S.map((x) => x.st).join(',')}` : 'no pulse');
   check('No JavaScript errors on the page', pageErrors.length === 0, pageErrors.length ? pageErrors.join(' ; ') : 'none');
 } catch (e) {
   check('Playtest ran to completion', false, e.stack || String(e));
