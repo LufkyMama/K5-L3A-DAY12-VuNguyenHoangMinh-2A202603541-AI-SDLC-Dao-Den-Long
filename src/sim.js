@@ -18,6 +18,10 @@ export const r3 = (v) => {
   return Object.is(x, -0) ? 0 : x;
 };
 const distXZ = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+// "Within r" means distance <= r. EPS absorbs float error so an entity placed exactly r away
+// (e.g. offsets 0.72/0.96 → hypot = 1.2000000000000002) still counts as within r.
+const EPS = 1e-6;
+const within = (a, b, r) => distXZ(a, b) <= r + EPS;
 const secToTicks = (s) => Math.round(s * WORLD.tps);
 
 export function defaultLanterns(count = TUNING.lantern_count_night1) {
@@ -93,6 +97,8 @@ export class Game {
       if (l.lit !== undefined) {
         tgt.lit = l.lit;
         if (l.lit && l.deposited === undefined) tgt.deposited = T.lantern_cost;
+      } else if (tgt.deposited >= T.lantern_cost) {
+        tgt.lit = true; // a full lantern is a lit lantern (no event, no score while building)
       }
     }
     if (sc.time_left_s !== undefined) this.duration = sc.time_left_s;
@@ -111,7 +117,9 @@ export class Game {
       for (const s of sc.shades) {
         let id = s.id;
         if (!id) { id = this.allocShadeId(used); used.add(id); }
-        this.shades.push({ id, pos: [...s.pos], state: 'chase', stun: 0 });
+        const shade = { id, pos: [...s.pos], state: 'chase', stun: 0 };
+        this.constrainShade(shade); // a shade can never stand inside a lantern's safe circle, even at tick 0
+        this.shades.push(shade);
       }
     }
   }
@@ -146,7 +154,7 @@ export class Game {
   constrainShade(s) {
     for (const l of this.lanterns) {
       const d = distXZ(s.pos, l.pos);
-      if (d <= this.t.safe_radius) {
+      if (d <= this.t.safe_radius + EPS) {
         let dx = s.pos[0] - l.pos[0], dz = s.pos[2] - l.pos[2];
         if (d < 1e-9) { dx = 1; dz = 0; } else { dx /= d; dz /= d; }
         const R = this.t.safe_radius + WORLD.safeEps;
@@ -208,7 +216,7 @@ export class Game {
     if (p.carried < T.carry_capacity) {
       const keep = [];
       for (const m of this.motes) {
-        if (p.carried < T.carry_capacity && distXZ(p.pos, m.pos) <= T.pickup_radius) {
+        if (p.carried < T.carry_capacity && within(p.pos, m.pos, T.pickup_radius)) {
           p.carried += 1;
           this.score += T.score.per_mote;
           if (m.golden) this.boost = secToTicks(4);
@@ -223,7 +231,7 @@ export class Game {
       let best = null, bestD = Infinity;
       for (const l of this.lanterns) {
         const d = distXZ(p.pos, l.pos);
-        if (!l.lit && d <= T.interact_radius && d < bestD) { best = l; bestD = d; }
+        if (!l.lit && d <= T.interact_radius + EPS && d < bestD) { best = l; bestD = d; }
       }
       if (best) {
         const amount = Math.min(p.carried, T.lantern_cost - best.deposited);
@@ -235,12 +243,7 @@ export class Game {
             best.lit = true;
             this.score += T.score.per_lantern;
             ev('lantern_lit', { lantern_id: best.id });
-            if (this.lanterns.every((l) => l.lit)) {
-              this.score += T.score.per_second_left * Math.floor(Math.max(0, this.timeLeft));
-              this.score += T.score.per_flame_left * p.flames;
-              this.end('won', 'all_lit', ev);
-              return events;
-            }
+            if (this.checkAllLit(ev)) return events;
           }
         }
       }
@@ -254,7 +257,7 @@ export class Game {
       const stunned = [];
       for (const s of this.shades) {
         const d = distXZ(p.pos, s.pos);
-        if (d <= T.pulse_radius) {
+        if (d <= T.pulse_radius + EPS) {
           let dx = s.pos[0] - p.pos[0], dz = s.pos[2] - p.pos[2];
           if (d < 1e-9) { dx = 1; dz = 0; } else { dx /= d; dz /= d; }
           s.pos[0] += dx * T.pulse_push_m;
@@ -286,7 +289,7 @@ export class Game {
     // 7. shade contact
     if (this.invuln === 0) {
       const hitter = this.shades.find(
-        (s) => s.state !== 'stunned' && distXZ(s.pos, p.pos) <= T.shade_hit_radius,
+        (s) => s.state !== 'stunned' && within(s.pos, p.pos, T.shade_hit_radius),
       );
       if (hitter) {
         p.flames = Math.max(0, p.flames - 1);
@@ -325,9 +328,23 @@ export class Game {
       }
     }
 
-    // 9. dawn
+    // 9. scenario edge cases: a night that starts fully lit is won; a player with no flames has lost
+    if (this.checkAllLit(ev)) return events;
+    if (p.flames <= 0) { this.end('lost', 'no_flames', ev); return events; }
+
+    // 10. dawn
     if (this.timeLeft <= 1e-9) this.end('lost', 'dawn', ev);
     return events;
+  }
+
+  /** Win when every lantern is lit: +per_second_left × floor(time left) +per_flame_left × flames. */
+  checkAllLit(ev) {
+    if (this.state !== 'playing' || !this.lanterns.every((l) => l.lit)) return false;
+    const T = this.t;
+    this.score += T.score.per_second_left * Math.floor(Math.max(0, this.timeLeft));
+    this.score += T.score.per_flame_left * this.player.flames;
+    this.end('won', 'all_lit', ev);
+    return true;
   }
 
   end(result, reason, ev) {

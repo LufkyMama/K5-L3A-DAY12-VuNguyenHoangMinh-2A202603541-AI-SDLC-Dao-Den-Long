@@ -14,12 +14,22 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const tok = argv[i];
     if (!tok.startsWith('--')) throw new UsageError(`unexpected argument: ${tok}`);
-    const key = tok.slice(2);
-    const val = argv[i + 1];
-    if (val === undefined || val.startsWith('--')) throw new UsageError(`missing value for --${key}`);
-    i++;
-    if (known.has(key)) a[key] = val;
-    else process.stderr.write(`warning: ignoring unknown flag --${key}\n`);
+    let key = tok.slice(2), val;
+    const eq = key.indexOf('=');
+    if (eq >= 0) { val = key.slice(eq + 1); key = key.slice(0, eq); } // --ticks=600
+    const next = argv[i + 1];
+    const nextIsValue = next !== undefined && !(next.startsWith('--') && !/^--?\d/.test(next));
+    if (!known.has(key)) {
+      // unknown flag: warn and skip it (and its value, if it has one), never abort the run
+      process.stderr.write(`warning: ignoring unknown flag --${key}\n`);
+      if (val === undefined && nextIsValue) i++;
+      continue;
+    }
+    if (val === undefined) {
+      if (!nextIsValue) throw new UsageError(`missing value for --${key}`);
+      val = next; i++;
+    }
+    a[key] = val;
   }
   const int = (k, def) => {
     if (a[k] === undefined) {

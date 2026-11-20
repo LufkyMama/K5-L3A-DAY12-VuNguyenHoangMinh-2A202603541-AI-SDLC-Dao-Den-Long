@@ -21,7 +21,9 @@ test('snapshot 0 is pre-input state; snapshots every N; end line last; ticks exa
   for (const k of ['type', 'tick', 'sim_tick', 'state', 'time_left_s', 'score', 'player', 'lanterns', 'shades', 'motes_active']) {
     assert.ok(k in s0, k);
   }
-  assert.deepEqual(r.end, { type: 'end', ticks: 35, state: 'playing', score: r.end.score });
+  // default world: first shade spawns at 8 s and motes start ≥ 3 m away, so nothing can score by tick 35
+  // unless a mote lies within pickup_radius of the 3.5 m walk; count those pickups from the events.
+  assert.deepEqual(r.end, { type: 'end', ticks: 35, state: 'playing', score: T.score.per_mote * r.ev('mote_picked').length });
   near(r.snapAt(30).time_left_s, T.night1_duration_s - 30 / 60);
 });
 
