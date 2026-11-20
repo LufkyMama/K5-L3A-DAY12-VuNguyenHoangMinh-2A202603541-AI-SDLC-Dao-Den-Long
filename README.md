@@ -3,7 +3,12 @@
 > 🎬 **Video demo:** sẽ được đính kèm ở Release `v1.0.0` (Phase 4).
 > Bài lab Day 12 · AI SDLC · cá nhân · 2A202603541 – Vu Nguyen Hoang Minh. Đề bài gốc: [docs/lab/](docs/lab/README.md).
 
-Game 3D góc nhìn thứ ba. **Mây**, người giữ đèn nhỏ tuổi đội nón lá treo đèn lồng, chạy khắp hòn đảo giữa biển mây gom **đom đóm** để thắp lại **5 Đèn Lồng Lớn** trước bình minh, đồng thời né **Bóng Mực** trong sương đen.
+Game 3D góc nhìn thứ ba. **Mây**, người giữ đèn nhỏ tuổi đội nón lá treo đèn lồng, chạy khắp hòn đảo giữa biển mây gom **đom đóm** để thắp lại các **Đèn Lồng Lớn** trước bình minh, đồng thời né **Bóng Mực** trong sương đen.
+
+| Đêm | Đèn | Thời gian | Kẻ địch |
+|---|---|---|---|
+| 1 – Đảo Bến | 5 | 300 s | Bóng Mực |
+| 2 – Rừng Sương | 6 | 360 s | Bóng Mực + **Bóng Mực Lớn** (chậm hơn, chạm xa hơn) |
 
 ## Cài đặt và chạy (macOS / Linux / Windows, cần Node ≥ 22)
 
@@ -23,9 +28,9 @@ npm start        # rồi mở http://localhost:8080
 | F | Tỏa sáng: tốn 1 đom đóm, làm choáng và đẩy lùi Bóng Mực trong 6 m |
 | R | Chơi lại sau khi thắng/thua |
 
-Đom đóm được **nhặt tự động** khi chạm (túi chứa tối đa 5). Mỗi đèn cần 5 đom đóm. Bóng Mực không dám vào vòng 4 m quanh đèn (vòng sáng mờ trên mặt đất). Bị Bóng Mực chạm: mất 1 ngọn lửa (có 3), rơi hết đom đóm đang mang, bất tử 1.5 s.
+Chọn đêm ở màn bắt đầu (nút hoặc phím 1/2). Đom đóm được **nhặt tự động** khi chạm (túi chứa tối đa 5). Mỗi đèn cần 5 đom đóm. Bóng Mực không dám vào vòng 4 m quanh đèn **đã thắp** (vòng sáng mờ trên mặt đất); đèn chưa thắp không che chở được. Bị Bóng Mực chạm: mất 1 ngọn lửa (có 3), rơi hết đom đóm đang mang, bất tử 1.5 s.
 
-**Thắng:** thắp đủ 5 đèn. **Thua:** hết lửa, hoặc trời sáng (hết 300 s).
+**Thắng:** thắp đủ mọi đèn của đêm. **Thua:** hết lửa, hoặc trời sáng.
 
 ## Cách tính điểm
 
@@ -40,7 +45,7 @@ npm start        # rồi mở http://localhost:8080
 ## Headless (Test Contract v1.0) và kiểm chứng
 
 ```bash
-node src/headless.js --seed 1 --night 1 --ticks 600 --out out.jsonl [--scenario s.json] [--inputs i.json] [--snapshot-every 10]
+node src/headless.js --seed 1 --night 1|2 --ticks 600 --out out.jsonl [--scenario s.json] [--inputs i.json] [--snapshot-every 10]
 npm test               # 42 test hành vi, chạy qua CLI headless thật
 npm run proof -- 1     # tạo lại bằng chứng Phase 1 → docs/proof/phase-1/REPORT.md
 npm run playtest -- 1  # chơi thử bản GUI bằng phím/chuột thật qua Chrome → docs/proof/phase-1/playtest/PLAYTEST.md
@@ -49,7 +54,8 @@ npm run playtest -- 1  # chơi thử bản GUI bằng phím/chuột thật qua C
 - `game.contract.json`: `build_cmd` = `npm install`, `headless_cmd` = `node src/headless.js`. Tuning khớp đúng `src/tuning.js` (có test kiểm tra).
 - `fall_enabled: false`: mép đảo là tường, không thể rơi khỏi đảo nên không có sự kiện `player_hit` với `by: "fall"`. Không trường tuning nào là `null`.
 - File inputs/scenario sai định dạng → mã thoát 2. Lỗi khác (ví dụ `--night 2`) → mã 1.
-- Giả định cho các chỗ đề còn mơ hồ: [docs/notes/phase-1.md](docs/notes/phase-1.md).
+- Contract **v1.1** (Phase 2, tương thích ngược): thêm `--night 2`, `night` trong snapshot, `kind` (`ink`/`big`) cho Bóng Mực, tuning `lantern_count_night2`, `night2_duration_s`, `big_shade_speed`, `big_shade_hit_radius`.
+- Giả định cho các chỗ đề còn mơ hồ: [phase-1.md](docs/notes/phase-1.md), [phase-2.md](docs/notes/phase-2.md).
 
 ## Sáng tạo của tôi
 

@@ -47,3 +47,27 @@ Agent chạy ~75 lượt headless đối kháng của riêng nó và đối chi�
 ### Cần chỉnh cho phase sau
 - Khi ticket mới đổi luật: cập nhật `phase-N.md` trước, rồi test, rồi code.
 - Chạy agent `contract-reviewer` (không phải agent đã viết code) trước khi gắn tag.
+
+## Phase 2 (Ticket-02 tự đặt)
+
+**Kết quả:** `npm test` 54/54 · `npm run proof -- 2` PASS (13 dòng, cộng dồn Phase 1) · chơi thử GUI 19/19 (thêm 5 kiểm tra Đêm 2) · autopilot thắng 20/20 ở cả hai đêm. Chi tiết: [docs/proof/phase-2/REPORT.md](../proof/phase-2/REPORT.md).
+
+| Hạng mục | Trạng thái |
+|---|---|
+| P2-1…P2-9 (xem [phase-2.md](phase-2.md)) | Đạt, mỗi mục có test hoặc dòng proof |
+| Hỏng phase trước? | Không, ngoài đúng phần CR-1 thay thế. Reviewer so đầu ra Đêm 1 của commit `ab2de57` với HEAD: giống từng byte (bỏ 2 trường mới `night`, `kind`) trên s01–s06, s08 và 6 đêm mặc định; chỉ 2 lượt chạy khác, đúng chỗ CR-1 dự đoán |
+| Test Phase 2 có thật sự bắt được thiếu sót? | Chạy bộ test Phase 2 trên code Phase 1: 10/12 fail |
+
+### Thay đổi yêu cầu (CR-1)
+Đã ghi lý do và bảng test cũ bị sửa trong [phase-2.md](phase-2.md); giả định 7 của Phase 1 được gạch và trỏ sang CR-1. **Rủi ro (reviewer R1):** CR-1 đổi hành vi Đêm 1 so với contract v1.0. Nếu có bộ test ẩn của giảng viên cho Phase 1 kiểm "đèn chưa sáng vẫn đẩy Bóng Mực" thì sẽ trượt. Vì ticket ghi rõ là thay thế, và buổi lab không có giảng viên, tôi giữ CR-1. Nếu có ticket thật mâu thuẫn, cách an toàn là chỉ áp CR-1 cho Đêm 2.
+
+### AI sai ở đâu
+| Lỗi | Phát hiện | Sửa |
+|---|---|---|
+| Test P2-4 cho nhân vật đứng yên, bị giết trước khi con Bóng Mực thứ 3 sinh ra | Test đỏ ("spawned 2"), lỗi ở test | Cho nhân vật đứng trong vòng của một đèn đã sáng |
+| Script sửa file bằng chuỗi thay thế không khớp (dấu xuống dòng, ký tự thoát) nên dừng giữa chừng | Script báo "nf" và không ghi file | Viết patch ra file riêng; luôn kiểm tra bằng `grep` sau khi sửa |
+| Test "Bóng Mực bị choáng bị đẩy ra khi đèn sáng" đặt Bóng Mực ở chỗ mà cú tỏa sáng đã đẩy nó ra khỏi vòng từ trước | Test đỏ, lỗi ở test | Tính lại vị trí sau cú đẩy (z = 27.5, cách đèn 2.5 m) |
+| Hook test-gate báo đỏ liên tục khi sửa nhiều chỗ trong `sim.js` | Hook (đúng như thiết kế: đang TDD) | Không tắt hook; hoàn tất từng nhóm sửa rồi chạy lại |
+
+### Review độc lập Phase 2
+Không có lỗi code. Đã bổ sung theo góp ý: `--night 3` phải đúng mã 1; kiểm vị trí cả 6 đèn; con thứ 6 là `big` và tối đa 6 con; Bóng Mực đang choáng vẫn bị đẩy ra khi đèn sáng; bán kính chạm của Bóng Mực Lớn theo đường chéo lệch gốc; dòng proof CR-1 kiểm thêm việc Bóng Mực thật sự vào trong vòng 4 m.

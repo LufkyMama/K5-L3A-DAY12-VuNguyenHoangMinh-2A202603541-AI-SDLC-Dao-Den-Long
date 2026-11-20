@@ -34,7 +34,7 @@ Nguồn: lab board, tab Phase 1 (PRD-0, Test Contract v1.0). Đây là phase duy
 4. **Đẩy lùi** là dịch tức thời pulse_push_m theo hướng từ người chơi ra Bóng Mực (mặt phẳng XZ), sau đó áp ràng buộc safe_radius và biên đảo.
 5. **Choáng**: Bóng Mực đứng yên đúng `pulse_stun_s × 60` tick, sau đó trở lại `chase`. Trạng thái Bóng Mực: `chase`, `stunned`.
 6. **Bị chạm**: −1 flame, rơi `floor(carried × hit_drop_ratio)` đom đóm (ratio = 1, tức rơi hết), bất tử `invuln_s`. Đom đóm rơi **bay mất** (không tạo lại trên mặt đất) để thế giới `random_motes:false` đúng là chỉ có những con được liệt kê. Một tick chỉ bị chạm tối đa một lần.
-7. **safe_radius áp dụng cho mọi đèn**, sáng hay chưa sáng ("Bóng Mực sợ những chiếc đèn"; định nghĩa trong contract không nhắc điều kiện sáng). Bóng Mực bị đẩy ra cách đèn `safe_radius + 0.01` m.
+7. ~~**safe_radius áp dụng cho mọi đèn**~~ → **bị CR-1 (Phase 2) thay thế: chỉ đèn đã sáng.** Giả định gốc:, sáng hay chưa sáng ("Bóng Mực sợ những chiếc đèn"; định nghĩa trong contract không nhắc điều kiện sáng). Bóng Mực bị đẩy ra cách đèn `safe_radius + 0.01` m.
 8. **Không có rơi khỏi đảo**: đảo bán kính 40 m, mép đảo là tường mềm → `fall_enabled: false`, không có sự kiện `player_hit by fall`.
 9. **Điểm**: per_mote khi nhặt, per_lantern khi thắp, per_stun mỗi Bóng Mực bị choáng. **Chỉ khi thắng** cộng `per_second_left × floor(time_left_s)` và `per_flame_left × flames`. Thua không có thưởng.
 10. **Sinh thực thể** (khi `random_*` true): 30 đom đóm ban đầu, thêm 1 con mỗi 2 s khi còn < 20. Bóng Mực đầu tiên ở giây 8, sau đó mỗi 15 s, tối đa 5, sinh trên vòng bán kính 37 m, phía xa người chơi. Id: `M1…`, `S1…` theo thứ tự sinh; id tự sinh bỏ qua id đã có trong scenario.
