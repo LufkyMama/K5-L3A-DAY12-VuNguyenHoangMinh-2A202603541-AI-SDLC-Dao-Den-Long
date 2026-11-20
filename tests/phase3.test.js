@@ -65,9 +65,10 @@ test('P3-5 dash cooldown', () => {
   const cd = Math.round(T.dash_cooldown_s * 60);
   const r = headless({
     scenario: quiet(), ticks: cd + 10,
-    inputs: { frames: [{ tick: 0, dash: true }, { tick: 1, dash: false }, { tick: cd - 1, dash: true }, { tick: cd, dash: false }, { tick: cd + 1, dash: true }] },
+    // press 2 ticks before the cooldown ends (ignored), then exactly when it ends (step cd → event tick cd+1)
+    inputs: { frames: [{ tick: 0, dash: true }, { tick: 1, dash: false }, { tick: cd - 2, dash: true }, { tick: cd - 1, dash: false }, { tick: cd, dash: true }] },
   });
-  assert.deepEqual(r.ev('dash').map((e) => e.tick), [1, cd + 2]);
+  assert.deepEqual(r.ev('dash').map((e) => e.tick), [1, cd + 1]);
 });
 
 test('P3-6 dashing while standing still uses the last move direction (default +Z)', () => {
@@ -91,4 +92,27 @@ test('P3-7 without pause/dash: sim_tick equals tick, paused is false, explicit f
 test('P3-8 pause/dash must be booleans (exit 2)', () => {
   assert.equal(headless({ inputs: { frames: [{ tick: 0, pause: 1 }] }, ticks: 1 }).code, 2);
   assert.equal(headless({ inputs: { frames: [{ tick: 0, dash: 'yes' }] }, ticks: 1 }).code, 2);
+});
+
+test('P3-1 a pause in the middle of a dash freezes it; the remaining dash ticks run after resume', () => {
+  const r = headless({
+    scenario: quiet(), ticks: 70, every: 1,
+    inputs: { frames: [{ tick: 0, dash: true }, { tick: 5, pause: true }, { tick: 6, pause: false }, { tick: 50, pause: true }] },
+  });
+  // 5 dash ticks before the pause, the other DASH_TICKS-5 after resuming at step 50 → full dash at state 50 + (DASH_TICKS-5)
+  near(r.snapAt(5).player.pos[2], 5 * DASH_DIST / DASH_TICKS);
+  assert.equal(r.snapAt(49).player.pos[2], r.snapAt(6).player.pos[2]);
+  near(r.snapAt(50 + DASH_TICKS - 5).player.pos[2], DASH_DIST);
+});
+
+test('P3-5 the dash cooldown does not run down while paused', () => {
+  const cd = Math.round(T.dash_cooldown_s * 60);
+  const P = 100; // paused ticks
+  const r = headless({
+    scenario: quiet(), ticks: cd + P + 10,
+    inputs: { frames: [{ tick: 0, dash: true }, { tick: 1, dash: false, pause: true }, { tick: 2, pause: false }, { tick: 1 + P, pause: true },
+      { tick: 2 + P, pause: false }, { tick: cd + P - 1, dash: true }, { tick: cd + P, dash: false }, { tick: cd + P + 1, dash: true }] },
+  });
+  // gameplay steps are 0 and 1+P.. ; cooldown (cd steps) ends at gameplay step cd → tick cd + P
+  assert.deepEqual(r.ev('dash').map((e) => e.tick), [1, cd + P + 2]);
 });

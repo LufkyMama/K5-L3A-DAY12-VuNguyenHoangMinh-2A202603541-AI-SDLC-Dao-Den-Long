@@ -27,7 +27,7 @@ for (const f of fs.readdirSync(path.join(root, 'tests', 'scenarios')).filter((f)
 }
 for (const n of [1, 2]) { const ap = sc(n === 1 ? 'autopilot-seed1.inputs.json' : 'autopilot-night2-seed1.inputs.json'); if (fs.existsSync(ap)) cases.push({ name: `autopilot n${n}`, args: ['--seed', 1, '--night', n, '--ticks', 21600, '--inputs', ap] }); }
 const strip = (o) => { if (Array.isArray(o)) return o.map(strip); if (o && typeof o === 'object') return Object.fromEntries(Object.entries(o).filter(([k]) => !DROP.has(k)).map(([k, v]) => [k, strip(v)])); return o; };
-const run = (dir, args, out) => { const p = spawnSync(process.execPath, ['src/headless.js', ...args.map(String), '--out', out], { cwd: dir, encoding: 'utf8' }); return { code: p.status, text: fs.existsSync(out) ? fs.readFileSync(out, 'utf8').trim().split('\n').map((l) => JSON.stringify(strip(JSON.parse(l)))).join('\n') : '' }; };
+const run = (dir, args, out) => { fs.rmSync(out, { force: true }); /* never compare a previous case's file */ const p = spawnSync(process.execPath, ['src/headless.js', ...args.map(String), '--out', out], { cwd: dir, encoding: 'utf8' }); return { code: p.status, text: fs.existsSync(out) ? fs.readFileSync(out, 'utf8').trim().split('\n').map((l) => JSON.stringify(strip(JSON.parse(l)))).join('\n') : '' }; };
 let same = 0;
 for (const c of cases) {
   const a = run(oldDir, c.args, path.join(tmp, 'a.jsonl')), b = run(newDir, c.args, path.join(tmp, 'b.jsonl'));

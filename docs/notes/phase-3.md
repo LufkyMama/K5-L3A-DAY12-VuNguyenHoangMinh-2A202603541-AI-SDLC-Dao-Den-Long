@@ -33,3 +33,5 @@
 2. Đang lướt vẫn có thể bị Bóng Mực chạm (không bất tử). Lướt không xuyên qua mép đảo.
 3. Lướt không tốn đom đóm. Đang lướt thì bỏ qua input move (hướng khóa từ lúc bắt đầu).
 4. Tạm dừng không có tác dụng sau khi đêm đã kết thúc.
+5. Tick bỏ tạm dừng là một bước gameplay bình thường: nút **mới nhấn đúng tick đó** vẫn có tác dụng; nút đã nhấn từ lúc đang dừng thì không. (Làm rõ sau review Phase 3.)
+6. Lướt luôn đi đủ quãng đường, không phụ thuộc độ lớn của cần điều khiển, chỉ lấy hướng.
