@@ -9,9 +9,9 @@ export const CONTRACT = JSON.parse(fs.readFileSync(path.join(ROOT, 'game.contrac
 export const T = CONTRACT.tuning;
 
 /** Run the real headless CLI exactly as a grader would (headless_cmd + flags). */
-export function headless({ seed = 1, scenario, inputs, ticks = 60, every, rawInputs, rawScenario, extra = [] } = {}) {
+export function headless({ seed = 1, night = 1, scenario, inputs, ticks = 60, every, rawInputs, rawScenario, extra = [] } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-'));
-  const args = ['src/headless.js', '--seed', String(seed), '--night', '1', '--ticks', String(ticks)];
+  const args = ['src/headless.js', '--seed', String(seed), '--night', String(night), '--ticks', String(ticks)];
   if (scenario || rawScenario !== undefined) {
     const f = path.join(dir, 'scenario.json');
     fs.writeFileSync(f, rawScenario ?? JSON.stringify(scenario));

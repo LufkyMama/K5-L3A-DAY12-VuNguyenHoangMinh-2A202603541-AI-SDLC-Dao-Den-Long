@@ -44,8 +44,8 @@ test('R-b: a lantern built with deposited = lantern_cost is lit (no event, no sc
   assert.equal(r.events.length, 0);
 });
 
-test('R-c: a scenario shade placed inside safe_radius is outside it already at snapshot 0', () => {
-  const r = headless({ scenario: quiet({ lanterns: [{ id: 'L1', pos: [0, 0, 25] }], shades: [{ pos: [0, 1, 24] }] }), ticks: 1, every: 1 });
+test('R-c: a scenario shade placed inside safe_radius of a LIT lantern is outside it already at snapshot 0 (CR-1)', () => {
+  const r = headless({ scenario: quiet({ lanterns: [{ id: 'L1', pos: [0, 0, 25], lit: true }], shades: [{ pos: [0, 1, 24] }] }), ticks: 1, every: 1 });
   assert.ok(distXZ(r.snaps[0].shades[0].pos, [0, 0, 25]) >= T.safe_radius);
 });
 

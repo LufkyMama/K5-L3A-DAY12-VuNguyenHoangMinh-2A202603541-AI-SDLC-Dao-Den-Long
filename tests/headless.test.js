@@ -213,9 +213,9 @@ test('dawn: time runs out -> lost (dawn)', () => {
   assert.equal(r.end.ticks, 60);
 });
 
-test('shades never enter safe_radius around a lantern; player at lantern is safe', () => {
+test('shades never enter safe_radius around a LIT lantern; player there is safe (CR-1)', () => {
   const r = headless({
-    scenario: quiet({ player: { pos: L1 }, lanterns: [{ id: 'L1', pos: L1 }], shades: [{ pos: [0, 1, 15] }, { pos: [8, 1, 25] }] }),
+    scenario: quiet({ player: { pos: L1 }, lanterns: [{ id: 'L1', pos: L1, lit: true }] /* CR-1 (Ticket-02): only lit lanterns repel */, shades: [{ pos: [0, 1, 15] }, { pos: [8, 1, 25] }] }),
     ticks: 600, every: 1,
   });
   for (const s of r.snaps.slice(1)) for (const sh of s.shades) assert.ok(distXZ(sh.pos, L1) >= T.safe_radius, `tick ${s.tick}`);

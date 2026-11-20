@@ -5,7 +5,8 @@ import { TUNING } from '../src/tuning.js';
 import { defaultLanterns } from '../src/sim.js';
 
 test('game.contract.json has all required top-level fields', () => {
-  assert.equal(CONTRACT.contract_version, '1.0');
+  // Ticket-02 bumped the contract to v1.1 (backward compatible: v1.0 fields unchanged)
+  assert.equal(CONTRACT.contract_version, '1.1');
   for (const k of ['team', 'build_cmd', 'run_cmd', 'headless_cmd']) {
     assert.equal(typeof CONTRACT[k], 'string', k);
     assert.ok(CONTRACT[k].length > 0, k);
@@ -28,5 +29,5 @@ test('contract tuning lists every field from Test Contract v1.0', () => {
 
 test('night 1 has lantern_count_night1 = 5 lanterns with ids L1..L5', () => {
   assert.equal(TUNING.lantern_count_night1, 5);
-  assert.deepEqual(defaultLanterns().map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5']);
+  assert.deepEqual(defaultLanterns(1).map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5']);
 });
