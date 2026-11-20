@@ -8,7 +8,8 @@ const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const isInt = (v) => Number.isInteger(v);
 const isVec3 = (v) => Array.isArray(v) && v.length === 3 && v.every(isNum);
 const BUTTONS = ['jump', 'interact', 'pulse', 'dash'];
-export const LANTERN_IDS = ['L1', 'L2', 'L3', 'L4', 'L5'];
+export const lanternIds = (count) => Array.from({ length: count }, (_, i) => `L${i + 1}`);
+const SHADE_KINDS = ['ink', 'big'];
 
 export function validateInputs(doc) {
   if (!isObj(doc) || !Array.isArray(doc.frames)) fail('inputs: expected {"frames": [...]}');
@@ -31,7 +32,8 @@ export function validateInputs(doc) {
   return doc;
 }
 
-export function validateScenario(doc) {
+export function validateScenario(doc, lanternCount = 5) {
+  const LANTERN_IDS = lanternIds(lanternCount);
   if (!isObj(doc)) fail('scenario: must be a JSON object');
   if ('player' in doc) {
     const p = doc.player;
@@ -57,12 +59,13 @@ export function validateScenario(doc) {
         if (ids.has(s.id)) fail(`scenario.shades[${i}].id: duplicate id ${s.id}`);
         ids.add(s.id);
       }
+      if ('kind' in s && !SHADE_KINDS.includes(s.kind)) fail(`scenario.shades[${i}].kind: must be "ink" or "big"`);
     });
   }
   if ('lanterns' in doc) {
     if (!Array.isArray(doc.lanterns)) fail('scenario.lanterns: must be an array');
     doc.lanterns.forEach((l, i) => {
-      if (!isObj(l) || !LANTERN_IDS.includes(l.id)) fail(`scenario.lanterns[${i}].id: must be one of L1..L5`);
+      if (!isObj(l) || !LANTERN_IDS.includes(l.id)) fail(`scenario.lanterns[${i}].id: must be one of ${LANTERN_IDS.join(', ')}`);
       if ('pos' in l && !isVec3(l.pos)) fail(`scenario.lanterns[${i}].pos: must be [x, y, z]`);
       if ('deposited' in l && (!isInt(l.deposited) || l.deposited < 0)) fail(`scenario.lanterns[${i}].deposited: integer >= 0`);
       if ('lit' in l && typeof l.lit !== 'boolean') fail(`scenario.lanterns[${i}].lit: must be boolean`);

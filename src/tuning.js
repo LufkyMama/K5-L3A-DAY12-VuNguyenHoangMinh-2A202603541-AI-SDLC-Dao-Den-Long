@@ -5,11 +5,13 @@ export const TUNING = {
   carry_capacity: 5,
   lantern_cost: 5,
   lantern_count_night1: 5,
+  lantern_count_night2: 6,
   pickup_radius: 1.2,
   interact_radius: 2.5,
   pulse_cost: 1,
   pulse_radius: 6,
   night1_duration_s: 300,
+  night2_duration_s: 360,
   flames: 3,
   invuln_s: 1.5,
   hit_drop_ratio: 1,
@@ -19,6 +21,8 @@ export const TUNING = {
   safe_radius: 4,
   shade_speed: 3.5,
   shade_hit_radius: 1,
+  big_shade_speed: 2.5,
+  big_shade_hit_radius: 1.6,
   fall_enabled: false,
   score: {
     per_mote: 10,
@@ -48,4 +52,10 @@ export const WORLD = {
   moteMinR: 3,
   moteMaxR: 38,
   safeEps: 0.01,
+};
+
+// Per-night layout and spawning (Ticket-02). Not contract numbers; documented in docs/notes/phase-2.md.
+export const NIGHTS = {
+  1: { lanterns: TUNING.lantern_count_night1, duration: TUNING.night1_duration_s, ring: 25, shadeFirstS: 8, shadeEveryS: 15, shadeMax: 5, bigEvery: 0 },
+  2: { lanterns: TUNING.lantern_count_night2, duration: TUNING.night2_duration_s, ring: 28, shadeFirstS: 5, shadeEveryS: 12, shadeMax: 6, bigEvery: 3 },
 };

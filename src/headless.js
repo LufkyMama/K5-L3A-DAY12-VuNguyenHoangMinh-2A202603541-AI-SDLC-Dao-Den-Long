@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { Game } from './sim.js';
+import { NIGHTS } from './tuning.js';
 import { FormatError, validateInputs, validateScenario } from './validate.js';
 
 class UsageError extends Error {}
@@ -51,7 +52,7 @@ function parseArgs(argv) {
   if (!opts.out) throw new UsageError('--out is required');
   if (opts.ticks < 0) throw new UsageError('--ticks must be >= 0');
   if (opts.every < 1) throw new UsageError('--snapshot-every must be >= 1');
-  if (opts.night !== 1) throw new UsageError(`--night ${opts.night} is not available (only night 1)`);
+  if (!NIGHTS[opts.night]) throw new UsageError(`--night ${opts.night} is not available (nights: ${Object.keys(NIGHTS).join(', ')})`);
   return opts;
 }
 
@@ -62,7 +63,7 @@ function readJson(path, label) {
 }
 
 export function run(opts) {
-  const scenario = opts.scenario ? validateScenario(readJson(opts.scenario, 'scenario')) : null;
+  const scenario = opts.scenario ? validateScenario(readJson(opts.scenario, 'scenario'), NIGHTS[opts.night].lanterns) : null;
   const frames = opts.inputs ? validateInputs(readJson(opts.inputs, 'inputs')).frames : [];
   const game = new Game({ seed: opts.seed, night: opts.night, scenario, creative: false });
 

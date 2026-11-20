@@ -1,6 +1,6 @@
 // Deterministic game simulation for Đảo Đèn Lồng. Shared by headless runner and browser client.
 // Pure logic: no DOM, no timers, no Math.random. Fixed step = 1/60 s.
-import { TUNING, WORLD } from './tuning.js';
+import { TUNING, WORLD, NIGHTS } from './tuning.js';
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -24,13 +24,14 @@ const EPS = 1e-6;
 const within = (a, b, r) => distXZ(a, b) <= r + EPS;
 const secToTicks = (s) => Math.round(s * WORLD.tps);
 
-export function defaultLanterns(count = TUNING.lantern_count_night1) {
+export function defaultLanterns(night = 1) {
+  const { lanterns: count, ring } = NIGHTS[night];
   const out = [];
   for (let i = 0; i < count; i++) {
     const a = (i * 2 * Math.PI) / count;
     out.push({
       id: `L${i + 1}`,
-      pos: [r3(WORLD.lanternRing * Math.sin(a)), 0, r3(WORLD.lanternRing * Math.cos(a))],
+      pos: [r3(ring * Math.sin(a)), 0, r3(ring * Math.cos(a))],
       lit: false,
       deposited: 0,
     });
@@ -59,19 +60,22 @@ export class Game {
   constructor({ seed = 0, night = 1, scenario = null, creative = false } = {}) {
     const T = TUNING;
     this.t = T;
+    if (!NIGHTS[night]) throw new Error(`unknown night ${night}`);
     this.night = night;
+    this.N = NIGHTS[night];
+    this.spawnedShades = 0;
     this.creative = creative;
     this.rand = mulberry32(seed);
     this.steps = 0;
     this.state = 'playing';
     this.result = null;
     this.score = 0;
-    this.duration = T.night1_duration_s;
+    this.duration = this.N.duration;
     this.prevButtons = { jump: false, interact: false, pulse: false, dash: false };
     this.nextMoteN = 1;
     this.nextShadeN = 1;
     this.moteRespawnTimer = 0;
-    this.shadeSpawnTimer = secToTicks(WORLD.shadeFirstS);
+    this.shadeSpawnTimer = secToTicks(this.N.shadeFirstS);
     this.pulseCooldown = 0;
     this.invuln = 0;
     this.lastPulseTick = -9999; // presentation only
@@ -89,7 +93,7 @@ export class Game {
       if (sc.player.carried !== undefined) this.player.carried = sc.player.carried;
       if (sc.player.flames !== undefined) this.player.flames = sc.player.flames;
     }
-    this.lanterns = defaultLanterns();
+    this.lanterns = defaultLanterns(night);
     for (const l of sc.lanterns || []) {
       const tgt = this.lanterns.find((x) => x.id === l.id);
       if (l.pos) tgt.pos = [...l.pos];
@@ -117,8 +121,8 @@ export class Game {
       for (const s of sc.shades) {
         let id = s.id;
         if (!id) { id = this.allocShadeId(used); used.add(id); }
-        const shade = { id, pos: [...s.pos], state: 'chase', stun: 0 };
-        this.constrainShade(shade); // a shade can never stand inside a lantern's safe circle, even at tick 0
+        const shade = { id, kind: s.kind || 'ink', pos: [...s.pos], state: 'chase', stun: 0 };
+        this.constrainShade(shade); // a shade can never stand inside a lit lantern's safe circle, even at tick 0
         this.shades.push(shade);
       }
     }
@@ -150,9 +154,10 @@ export class Game {
     }
   }
 
-  /** Keep a shade out of every lantern's safe circle and within the play area. */
+  /** Keep a shade out of every LIT lantern's safe circle (CR-1, Ticket-02) and within the play area. */
   constrainShade(s) {
     for (const l of this.lanterns) {
+      if (!l.lit) continue;
       const d = distXZ(s.pos, l.pos);
       if (d <= this.t.safe_radius + EPS) {
         let dx = s.pos[0] - l.pos[0], dz = s.pos[2] - l.pos[2];
@@ -273,23 +278,23 @@ export class Game {
       ev('pulse', { stunned_ids: stunned });
     }
 
-    // 6. shades chase
-    const step = T.shade_speed / WORLD.tps;
+    // 6. shades chase (Bóng Mực Lớn is slower); then every shade, stunned or not, is kept out of lit lanterns
     for (const s of this.shades) {
       if (s.state === 'stunned') continue;
+      const step = this.shadeSpeed(s) / WORLD.tps;
       const d = distXZ(s.pos, p.pos);
       if (d > 1e-9) {
         const k = Math.min(step, d) / d;
         s.pos[0] += (p.pos[0] - s.pos[0]) * k;
         s.pos[2] += (p.pos[2] - s.pos[2]) * k;
       }
-      this.constrainShade(s);
     }
+    for (const s of this.shades) this.constrainShade(s);
 
-    // 7. shade contact
+    // 7. shade contact (Bóng Mực Lớn reaches further)
     if (this.invuln === 0) {
       const hitter = this.shades.find(
-        (s) => s.state !== 'stunned' && within(s.pos, p.pos, T.shade_hit_radius),
+        (s) => s.state !== 'stunned' && within(s.pos, p.pos, this.shadeHitRadius(s)),
       );
       if (hitter) {
         p.flames = Math.max(0, p.flames - 1);
@@ -316,15 +321,17 @@ export class Game {
     }
     if (this.randomShades) {
       if (this.shadeSpawnTimer > 0) this.shadeSpawnTimer--;
-      if (this.shadeSpawnTimer === 0 && this.shades.length < WORLD.shadeMax) {
+      if (this.shadeSpawnTimer === 0 && this.shades.length < this.N.shadeMax) {
         let a = this.rand() * Math.PI * 2;
         let pos = [WORLD.shadeSpawnRing * Math.sin(a), WORLD.shadeHeight, WORLD.shadeSpawnRing * Math.cos(a)];
         if (distXZ(pos, p.pos) < 12) { pos = [-pos[0], pos[1], -pos[2]]; }
-        const s = { id: this.allocShadeId(), pos, state: 'chase', stun: 0 };
+        this.spawnedShades += 1;
+        const big = this.N.bigEvery > 0 && this.spawnedShades % this.N.bigEvery === 0;
+        const s = { id: this.allocShadeId(), kind: big ? 'big' : 'ink', pos, state: 'chase', stun: 0 };
         this.constrainShade(s);
         this.shades.push(s);
         ev('shade_spawned', { id: s.id });
-        this.shadeSpawnTimer = secToTicks(WORLD.shadeEveryS);
+        this.shadeSpawnTimer = secToTicks(this.N.shadeEveryS);
       }
     }
 
@@ -336,6 +343,9 @@ export class Game {
     if (this.timeLeft <= 1e-9) this.end('lost', 'dawn', ev);
     return events;
   }
+
+  shadeSpeed(s) { return s.kind === 'big' ? this.t.big_shade_speed : this.t.shade_speed; }
+  shadeHitRadius(s) { return s.kind === 'big' ? this.t.big_shade_hit_radius : this.t.shade_hit_radius; }
 
   /** Win when every lantern is lit: +per_second_left × floor(time left) +per_flame_left × flames. */
   checkAllLit(ev) {
@@ -356,6 +366,7 @@ export class Game {
   snapshot() {
     return {
       type: 'snapshot',
+      night: this.night,
       tick: this.steps,
       sim_tick: this.steps,
       state: this.state,
@@ -367,7 +378,7 @@ export class Game {
         carried: this.player.carried,
       },
       lanterns: this.lanterns.map((l) => ({ id: l.id, pos: l.pos.map(r3), lit: l.lit, deposited: l.deposited })),
-      shades: this.shades.map((s) => ({ id: s.id, pos: s.pos.map(r3), state: s.state })),
+      shades: this.shades.map((s) => ({ id: s.id, kind: s.kind, pos: s.pos.map(r3), state: s.state })),
       motes_active: this.motes.length,
       motes: this.motes.map((m) => ({ id: m.id, pos: m.pos.map(r3) })),
     };
