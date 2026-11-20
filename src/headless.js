@@ -74,7 +74,7 @@ export function run(opts) {
     if (buf.length >= 2000) { fs.writeSync(fd, buf.join('\n') + '\n'); buf = []; }
   };
 
-  const held = { move: [0, 0], cam_yaw_deg: 0, jump: false, interact: false, pulse: false, dash: false };
+  const held = { move: [0, 0], cam_yaw_deg: 0, jump: false, interact: false, pulse: false, dash: false, pause: false };
   let fi = 0;
   emit(game.snapshot());
   for (let k = 0; k < opts.ticks && game.state === 'playing'; k++) {
@@ -83,9 +83,9 @@ export function run(opts) {
       for (const key of Object.keys(held)) if (key in f) held[key] = f[key];
     }
     for (const e of game.step(held)) emit(e);
-    if (game.steps % opts.every === 0) emit(game.snapshot());
+    if (game.tick % opts.every === 0) emit(game.snapshot());
   }
-  emit({ type: 'end', ticks: game.steps, state: game.state, score: game.score });
+  emit({ type: 'end', ticks: game.tick, state: game.state, score: game.score });
   fs.writeSync(fd, buf.join('\n') + '\n');
   fs.closeSync(fd);
   return game;

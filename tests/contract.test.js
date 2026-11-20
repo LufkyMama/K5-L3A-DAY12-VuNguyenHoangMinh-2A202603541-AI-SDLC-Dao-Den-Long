@@ -6,7 +6,7 @@ import { defaultLanterns } from '../src/sim.js';
 
 test('game.contract.json has all required top-level fields', () => {
   // Ticket-02 bumped the contract to v1.1 (backward compatible: v1.0 fields unchanged)
-  assert.equal(CONTRACT.contract_version, '1.1');
+  assert.equal(CONTRACT.contract_version, '1.2'); // Ticket-03: v1.2
   for (const k of ['team', 'build_cmd', 'run_cmd', 'headless_cmd']) {
     assert.equal(typeof CONTRACT[k], 'string', k);
     assert.ok(CONTRACT[k].length > 0, k);

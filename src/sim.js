@@ -66,12 +66,18 @@ export class Game {
     this.spawnedShades = 0;
     this.creative = creative;
     this.rand = mulberry32(seed);
-    this.steps = 0;
+    this.steps = 0; // gameplay steps = sim_tick (frozen while paused)
+    this.tick = 0; // all ticks, including paused ones (Ticket-03)
+    this.paused = false;
+    this.dashTicks = 0;
+    this.dashCooldown = 0;
+    this.dashDir = [0, 1];
+    this.lastDir = [0, 1]; // last non-zero world move direction (default +Z)
     this.state = 'playing';
     this.result = null;
     this.score = 0;
     this.duration = this.N.duration;
-    this.prevButtons = { jump: false, interact: false, pulse: false, dash: false };
+    this.prevButtons = { jump: false, interact: false, pulse: false, dash: false, pause: false };
     this.nextMoteN = 1;
     this.nextShadeN = 1;
     this.moteRespawnTimer = 0;
@@ -183,25 +189,42 @@ export class Game {
     const events = [];
     if (this.state !== 'playing') return events;
     const T = this.t;
-    this.steps += 1;
-    const tick = this.steps;
+    this.tick += 1;
+    const tick = this.tick;
     const ev = (name, data) => events.push({ type: 'event', tick, name, data });
     const edge = (k) => !!input[k] && !this.prevButtons[k];
-    const jumpE = edge('jump'), interactE = edge('interact'), pulseE = edge('pulse');
+    const jumpE = edge('jump'), interactE = edge('interact'), pulseE = edge('pulse'), dashE = edge('dash'), pauseE = edge('pause');
     for (const k of Object.keys(this.prevButtons)) this.prevButtons[k] = !!input[k];
+
+    // 0. pause (Ticket-03): ticks keep counting, gameplay (sim_tick, time, timers, entities) is frozen.
+    // Buttons pressed while paused are consumed above, so they cannot fire on resume.
+    if (pauseE) { this.paused = !this.paused; ev('pause', { paused: this.paused }); }
+    if (this.paused) return events;
+    this.steps += 1;
 
     // 1. timers
     if (this.invuln > 0) this.invuln--;
     if (this.pulseCooldown > 0) this.pulseCooldown--;
     if (this.boost > 0) this.boost--;
+    if (this.dashCooldown > 0) this.dashCooldown--;
     for (const s of this.shades) {
       if (s.stun > 0) { s.stun--; if (s.stun === 0) s.state = 'chase'; }
     }
 
     // 2. player movement
     const p = this.player;
-    const [wx, wz] = worldMove(input.move || [0, 0], input.cam_yaw_deg || 0);
-    const speed = T.player_speed * (this.boost > 0 ? 1.4 : 1);
+    let [wx, wz] = worldMove(input.move || [0, 0], input.cam_yaw_deg || 0);
+    const wl = Math.hypot(wx, wz);
+    if (wl > 1e-9) this.lastDir = [wx / wl, wz / wl];
+    // dash (Ticket-03): fixed direction and speed for dash_duration_s, then cooldown
+    if (dashE && this.dashCooldown === 0) {
+      this.dashDir = [...this.lastDir];
+      this.dashTicks = secToTicks(T.dash_duration_s);
+      this.dashCooldown = secToTicks(T.dash_cooldown_s);
+      ev('dash', { dir: this.dashDir.map(r3) });
+    }
+    let speed = T.player_speed * (this.boost > 0 ? 1.4 : 1);
+    if (this.dashTicks > 0) { [wx, wz] = this.dashDir; speed = T.player_speed * T.dash_speed_mult; this.dashTicks--; }
     p.pos[0] += (wx * speed) / WORLD.tps;
     p.pos[2] += (wz * speed) / WORLD.tps;
     const pr = Math.hypot(p.pos[0], p.pos[2]);
@@ -367,9 +390,10 @@ export class Game {
     return {
       type: 'snapshot',
       night: this.night,
-      tick: this.steps,
+      tick: this.tick,
       sim_tick: this.steps,
       state: this.state,
+      paused: this.paused,
       time_left_s: r3(Math.max(0, this.timeLeft)),
       score: this.score,
       player: {

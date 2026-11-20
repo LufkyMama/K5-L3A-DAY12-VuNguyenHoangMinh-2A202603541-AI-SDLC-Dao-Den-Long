@@ -24,6 +24,9 @@ export const TUNING = {
   big_shade_speed: 2.5,
   big_shade_hit_radius: 1.6,
   fall_enabled: false,
+  dash_speed_mult: 3,
+  dash_duration_s: 0.2,
+  dash_cooldown_s: 2,
   score: {
     per_mote: 10,
     per_lantern: 100,

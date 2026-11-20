@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.1",
+  "contract_version": "1.2",
   "team": "2A202603541-VuNguyenHoangMinh",
   "build_cmd": "npm install",
   "run_cmd": "npm start",
@@ -28,6 +28,9 @@
     "big_shade_speed": 2.5,
     "big_shade_hit_radius": 1.6,
     "fall_enabled": false,
+    "dash_speed_mult": 3,
+    "dash_duration_s": 0.2,
+    "dash_cooldown_s": 2,
     "score": {
       "per_mote": 10,
       "per_lantern": 100,

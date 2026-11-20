@@ -7,7 +7,7 @@ import { headless, quiet, T, distXZ, CONTRACT } from './helpers.js';
 const near = (a, b, eps = 1e-3) => assert.ok(Math.abs(a - b) <= eps, `${a} !~ ${b}`);
 
 test('contract v1.1 declares the new tuning fields', () => {
-  assert.equal(CONTRACT.contract_version, '1.1');
+  assert.equal(CONTRACT.contract_version, '1.2'); // Ticket-03: v1.2
   for (const k of ['lantern_count_night2', 'night2_duration_s', 'big_shade_speed', 'big_shade_hit_radius']) assert.ok(k in T, k);
   assert.equal(T.lantern_count_night2, 6);
   assert.equal(T.night2_duration_s, 360);
