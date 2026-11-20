@@ -11,11 +11,12 @@ Công cụ: **Claude Code** (model Claude Opus 5.5), một phiên duy nhất cho
 | Kiểm chứng trước | Viết test hành vi qua CLI thật, giá trị mong đợi suy ra từ contract | 2 test sai lúc đầu (xem evaluation) |
 | Build | sim → validate → headless → test → GUI → autopilot → proof | Commit nhỏ theo từng việc |
 | Verify | `npm test`, `npm run proof -- 1`, chụp GUI bằng Chrome headless, xem ảnh | |
+| Chơi thử GUI | "Run the game for me to check" → agent viết driver CDP chơi bằng phím/chuột thật, sau đó đưa vào repo thành `npm run playtest` | Bắt được một kiểm tra luôn-đạt trong chính driver (xem evaluation) |
 
 ### Token / chi phí (ước tính)
 
 | Phase | Token ước tính | Cách tiết kiệm |
 |---|---|---|
-| 1 | ~250–350k token tổng (input có cache + output); phần lớn là ngữ cảnh đọc tài liệu lab và viết ~1.5k dòng code/test/doc | Đọc yêu cầu một lần và trích đúng phần cần; không dùng subagent; chạy test bằng một lệnh và chỉ in dòng tóm tắt (`grep ℹ`); ảnh chụp chỉ xem những tấm cần |
+| 1 | ~450–550k token tổng (kể cả chơi thử GUI và ~90k của agent review) (input có cache + output); phần lớn là ngữ cảnh đọc tài liệu lab và viết ~1.5k dòng code/test/doc | Đọc yêu cầu một lần và trích đúng phần cần; chỉ dùng 1 subagent (review độc lập, ~90k token); chạy test bằng một lệnh và chỉ in dòng tóm tắt (`grep ℹ`); ảnh chụp chỉ xem những tấm cần |
 
 > Đây là ước tính của agent, không phải số đo. Số thật xem bằng `/cost` trong Claude Code (hoặc trang usage) rồi cập nhật vào bảng.

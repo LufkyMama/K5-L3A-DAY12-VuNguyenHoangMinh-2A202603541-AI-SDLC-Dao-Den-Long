@@ -16,7 +16,8 @@ Nguồn: lab board, tab Phase 1 (PRD-0, Test Contract v1.0). Đây là phase duy
 | R8 | Chạm Bóng Mực mất máu | `player_hit` −1 flame, rơi đom đóm, bất tử invuln_s | test contact · proof `s05` |
 | R9 | Thắng / thua | thắp đủ 5 → won/all_lit; hết flames → lost/no_flames; hết giờ → lost/dawn; headless dừng ngay | tests win/no_flames/dawn · proof `s03 s05 s06` |
 | R10 | Điểm số | per_mote, per_lantern, per_stun, thưởng thời gian + flames khi thắng | test win score (=848 ở s03) |
-| R11 | HUD + chơi lại | HUD hiện lửa, đom đóm, đèn, điểm, giờ, pulse; màn kết thúc có nút/phím R chơi lại | `gui-play.png`, chơi tay |
+| R11 | HUD + chơi lại | HUD hiện lửa, đom đóm, đèn, điểm, giờ, pulse; màn kết thúc có nút/phím R chơi lại | `gui-play.png` · [playtest/PLAYTEST.md](../proof/phase-1/playtest/PLAYTEST.md) (thắng → R → thua → nút "Chơi lại") |
+| R14 | Bản GUI đúng như headless khi chơi bằng phím thật | W/D/Space/E/F/R và nút bấm tạo đúng hành vi; điểm thắng đúng công thức README; không lỗi JS | `npm run playtest -- 1` (15/15) |
 | R12 | Không khí: đảo sáng dần khi thắp đèn; vàng cam = tốt; tím đen = nguy hiểm; Mây đội nón lá có đèn nhỏ | ảnh so sánh 0/5 với 3/5 đèn | `gui-play.png` vs `gui-lit3.png` |
 | R13 | Chơi được Đêm 1 từ đầu tới thắng/thua | inputs ghi lại từ autopilot, chạy lại qua CLI → won | proof `autopilot-seed1`, autopilot thắng 20/20 seed |
 | C1 | game.contract.json đủ trường, tuning đúng số game dùng | tuning trong file == `src/tuning.js` | `tests/contract.test.js` |
@@ -38,10 +39,13 @@ Nguồn: lab board, tab Phase 1 (PRD-0, Test Contract v1.0). Đây là phase duy
 9. **Điểm**: per_mote khi nhặt, per_lantern khi thắp, per_stun mỗi Bóng Mực bị choáng. **Chỉ khi thắng** cộng `per_second_left × floor(time_left_s)` và `per_flame_left × flames`. Thua không có thưởng.
 10. **Sinh thực thể** (khi `random_*` true): 30 đom đóm ban đầu, thêm 1 con mỗi 2 s khi còn < 20. Bóng Mực đầu tiên ở giây 8, sau đó mỗi 15 s, tối đa 5, sinh trên vòng bán kính 37 m, phía xa người chơi. Id: `M1…`, `S1…` theo thứ tự sinh; id tự sinh bỏ qua id đã có trong scenario.
 11. **Vị trí đèn mặc định**: vòng bán kính 25 m, L1 tại (0,0,25), các đèn sau cách nhau 72° (`x = 25·sin a, z = 25·cos a`).
-12. Scenario `lit:true` mà không có `deposited` → `deposited = lantern_cost`. Đèn đặt sẵn sáng không cộng điểm.
+12. Scenario `lit:true` mà không có `deposited` → `deposited = lantern_cost`; `deposited ≥ lantern_cost` mà không có `lit` → đèn sáng. Đèn đặt sẵn sáng không cộng điểm. Nếu cả 5 đèn sáng ngay từ đầu thì thắng (`all_lit`) ở tick 1, chỉ có điểm thưởng thắng.
 13. **Nhảy** 7 m/s, trọng lực 20 m/s² (cao ~1.2 m). Nhảy không giúp né Bóng Mực vì khoảng cách tính theo XZ.
 14. `dash` chưa có (bỏ qua). Cờ CLI lạ: cảnh báo ra stderr rồi bỏ qua. `--night` khác 1 → mã 1. File thiếu / JSON hỏng / trường sai → mã 2.
 15. Snapshot chỉ ở các tick chia hết cho `--snapshot-every` (không thêm snapshot cuối); dòng `end` luôn có. Mảng `motes` (id, pos) có trong snapshot.
+16. "Trong bán kính r" được so với `r + 1e-6` để bù sai số số thực (ví dụ lệch (0.72, 0.96) cho hypot 1.2000000000000002).
+17. Bóng Mực trong scenario nằm trong `safe_radius` của một đèn bị đẩy ra ngay khi dựng (snapshot 0 đã ở ngoài). Scenario `flames: 0` → thua `no_flames` ở tick 1. `carried` lớn hơn sức chứa được giữ nguyên (chỉ không nhặt thêm). Bóng Mực đang choáng không gây sát thương.
+18. CLI nhận cả `--key value` và `--key=value`; cờ lạ (có hoặc không có giá trị) chỉ cảnh báo.
 
 ## 3. Quyết định kỹ thuật
 

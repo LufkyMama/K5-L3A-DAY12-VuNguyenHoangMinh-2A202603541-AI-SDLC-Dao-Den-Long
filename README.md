@@ -41,8 +41,9 @@ npm start        # rồi mở http://localhost:8080
 
 ```bash
 node src/headless.js --seed 1 --night 1 --ticks 600 --out out.jsonl [--scenario s.json] [--inputs i.json] [--snapshot-every 10]
-npm test               # 35 test hành vi, chạy qua CLI headless thật
+npm test               # 42 test hành vi, chạy qua CLI headless thật
 npm run proof -- 1     # tạo lại bằng chứng Phase 1 → docs/proof/phase-1/REPORT.md
+npm run playtest -- 1  # chơi thử bản GUI bằng phím/chuột thật qua Chrome → docs/proof/phase-1/playtest/PLAYTEST.md
 ```
 
 - `game.contract.json`: `build_cmd` = `npm install`, `headless_cmd` = `node src/headless.js`. Tuning khớp đúng `src/tuning.js` (có test kiểm tra).
@@ -59,13 +60,13 @@ Chỉ bật trong bản chơi có giao diện (`creative: true`). Headless luôn
 - **Âm thanh tự sinh** bằng WebAudio (nhặt, nạp, thắp đèn, tỏa sáng, bị chạm), không dùng file âm thanh.
 - **Hạt tiến độ** quanh cột đèn (sáng dần theo số đom đóm đã nạp) và **vòng an toàn** mờ quanh mỗi đèn.
 
-Bằng chứng phần cũ vẫn đúng: `tests/creative.test.js` (Đom Đóm Vàng chỉ xuất hiện khi `creative: true`; CLI tạo game với `creative: false`) cùng toàn bộ 35 test và proof vẫn PASS.
+Bằng chứng phần cũ vẫn đúng: `tests/creative.test.js` (Đom Đóm Vàng chỉ xuất hiện khi `creative: true`; đầu ra CLI giống hệt game `creative: false` và khác game `creative: true`) cùng toàn bộ 42 test, proof và chơi thử GUI vẫn PASS.
 
 ## Bằng chứng và ghi chép
 
 | | |
 |---|---|
-| Bằng chứng Phase 1 | [docs/proof/phase-1/REPORT.md](docs/proof/phase-1/REPORT.md) (test, scenario, autopilot thắng cả đêm, tất định, ảnh GUI) |
+| Bằng chứng Phase 1 | [docs/proof/phase-1/REPORT.md](docs/proof/phase-1/REPORT.md) (test, scenario, autopilot thắng cả đêm, tất định, ảnh GUI) · [chơi thử GUI](docs/proof/phase-1/playtest/PLAYTEST.md) (15 kiểm tra bằng phím/chuột thật) |
 | Yêu cầu, tiêu chí, giả định | [docs/notes/phase-1.md](docs/notes/phase-1.md) |
 | Đánh giá từng phase | [docs/notes/evaluation.md](docs/notes/evaluation.md) |
 | Nhật ký dùng AI và token | [docs/notes/ai-log.md](docs/notes/ai-log.md) |
