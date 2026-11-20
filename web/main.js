@@ -1,7 +1,7 @@
 // Browser client: renders the shared deterministic sim (src/sim.js) with Three.js.
 // All gameplay rules live in sim.js; this file only does input, rendering, HUD and sound.
 import * as THREE from 'three';
-import { Game, mulberry32 } from '/src/sim.js';
+import { Game, mulberry32, defaultLanterns } from '/src/sim.js';
 import { TUNING, WORLD } from '/src/tuning.js';
 
 const $ = (id) => document.getElementById(id);
@@ -49,10 +49,11 @@ for (let i = 0; i < 60; i++) {
 }
 // trees and rocks (seeded, avoid lantern spots and centre)
 const tmpGame = new Game({ seed: 0 });
+const allLanternSpots = [...defaultLanterns(1), ...defaultLanterns(2)];
 for (let i = 0; i < 40; i++) {
   const a = deco() * Math.PI * 2, r = 8 + deco() * 30;
   const x = Math.sin(a) * r, z = Math.cos(a) * r;
-  if (tmpGame.lanterns.some((l) => Math.hypot(l.pos[0] - x, l.pos[2] - z) < 9)) continue;
+  if (allLanternSpots.some((l) => Math.hypot(l.pos[0] - x, l.pos[2] - z) < 9)) continue;
   const g = new THREE.Group();
   if (deco() < 0.7) {
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 1.2, 6), mat('#3b2a20'));
@@ -153,7 +154,7 @@ const makeMote = (m) => {
   scene.add(obj);
   return { obj, phase: (parseInt(m.id.slice(1), 10) * 1.7) % 6.28 };
 };
-const makeShade = () => {
+const makeShade = (s) => {
   const m = new THREE.MeshStandardMaterial({ color: '#14051f', emissive: '#2e0a48', roughness: 0.4, transparent: true, opacity: 0.92 });
   const obj = new THREE.Group();
   const blob = new THREE.Mesh(shadeGeo, m);
@@ -161,6 +162,7 @@ const makeShade = () => {
   const e1 = new THREE.Mesh(eyeGeo, eyeMat), e2 = new THREE.Mesh(eyeGeo, eyeMat);
   e1.position.set(-0.25, 0.3, 0.62); e2.position.set(0.25, 0.3, 0.62);
   obj.add(blob, e1, e2);
+  if (s.kind === 'big') obj.scale.setScalar(1.7); // Bóng Mực Lớn
   scene.add(obj);
   return { obj, m };
 };
@@ -194,6 +196,8 @@ addEventListener('keydown', (e) => {
   keys.add(e.code);
   if (KEYMAP[e.code]) latched[KEYMAP[e.code]] = true;
   if (e.code === 'KeyR' && game && game.state !== 'playing') startGame();
+  if (e.code === 'Digit2' && !game) startGame(2);
+  if (e.code === 'Digit1' && !game) startGame(1);
   if (e.code === 'Space') e.preventDefault();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
@@ -217,32 +221,42 @@ function readInput() {
 
 // ---------- game lifecycle ----------
 let game = null;
-function startGame() {
+const NIGHT_LOOK = {
+  1: { name: 'Đêm 1 – Đảo Bến', sky: '#120822', fog: 0x1a0b2e, density: 0.03, ground: '#2c3b2a' },
+  2: { name: 'Đêm 2 – Rừng Sương', sky: '#08140f', fog: 0x0f2219, density: 0.042, ground: '#1f3326' },
+};
+let currentNight = 1;
+function startGame(night = currentNight) {
+  currentNight = night;
   if (!actx) { try { actx = new AudioContext(); } catch { /* sound optional */ } }
   for (const v of lanternViews.values()) scene.remove(v.g);
   lanternViews.clear();
   for (const m of [moteViews, shadeViews]) { for (const v of m.values()) scene.remove(v.obj); m.clear(); }
-  // URL options (for reproducible screenshots): ?autostart&seed=5&lit=3
+  // URL options (for reproducible screenshots): ?autostart&night=2&seed=5&lit=3&shade
   const q = new URLSearchParams(location.search);
   const seed = q.has('seed') ? Number(q.get('seed')) : (Date.now() & 0x7fffffff);
   const litN = Number(q.get('lit') || 0);
   let scenario = null;
   if (litN || q.has('shade')) {
-    scenario = { player: { pos: [0, 0, 20] }, lanterns: ['L1', 'L2', 'L3', 'L4', 'L5'].slice(0, litN).map((id) => ({ id, lit: true })) };
-    if (q.has('shade')) scenario.shades = [{ id: 'S1', pos: [-2.5, 1, 26] }, { id: 'S2', pos: [3, 1, 27] }];
+    const ids = defaultLanterns(night).map((l) => l.id);
+    scenario = { player: { pos: [0, 0, 20] }, lanterns: ids.slice(0, Math.max(litN, q.has('shade') ? 1 : 0)).map((id) => ({ id, lit: true })) };
+    if (q.has('shade')) scenario.shades = [{ id: 'S1', pos: [-2.5, 1, 26] }, { id: 'S2', kind: night === 2 ? 'big' : 'ink', pos: [3, 1, 27] }];
   }
-  game = new Game({ seed, scenario, creative: true });
+  game = new Game({ seed, night, scenario, creative: true });
+  const look = NIGHT_LOOK[night];
+  NIGHT.set(look.sky); scene.fog.color.set(look.fog); island.material.color.set(look.ground);
   for (const l of game.lanterns) lanternViews.set(l.id, buildLantern(l));
   $('overlay').classList.add('hidden');
 }
-$('start').addEventListener('click', startGame);
+$('start').addEventListener('click', () => startGame(1));
+$('start2').addEventListener('click', () => startGame(2));
 
 function showEnd() {
   const won = game.state === 'won';
-  const reason = { all_lit: 'Cả 5 Đèn Lồng Lớn đã sáng!', dawn: 'Trời đã sáng mà đảo vẫn còn tối…', no_flames: 'Ngọn lửa của Mây đã tắt…' }[game.result.reason];
-  $('card').innerHTML = `<h1>${won ? 'Đảo đã sáng lại!' : 'Thua rồi'}</h1><p>${reason}</p>
+  const reason = { all_lit: `Cả ${game.lanterns.length} Đèn Lồng Lớn đã sáng!`, dawn: 'Trời đã sáng mà đảo vẫn còn tối…', no_flames: 'Ngọn lửa của Mây đã tắt…' }[game.result.reason];
+  $('card').innerHTML = `<h1>${won ? 'Đảo đã sáng lại!' : 'Thua rồi'}</h1><p>${NIGHT_LOOK[currentNight].name}: ${reason}</p>
     <p>Điểm: <b>${game.score}</b></p><button id="again">Chơi lại (R)</button>`;
-  $('again').addEventListener('click', startGame);
+  $('again').addEventListener('click', () => startGame());
   $('overlay').classList.remove('hidden');
 }
 
@@ -302,10 +316,10 @@ function render(dt) {
     v.bodyMat.emissive.set(l.lit ? '#ff8a2a' : '#000000');
     v.bodyMat.color.set(l.lit ? '#ffb35c' : '#5a1f1a');
     v.bars.forEach((b, i) => b.material.color.set(i < l.deposited ? '#ffc46b' : '#3a2a20'));
-    v.ring.material.opacity = l.lit ? 0.25 : 0.1;
+    v.ring.material.opacity = l.lit ? 0.25 : 0; // CR-1: only lit lanterns keep shades away
   }
-  const k = lit / 5;
-  scene.fog.density = 0.03 - 0.018 * k;
+  const k = lit / g.lanterns.length;
+  scene.fog.density = NIGHT_LOOK[g.night].density * (1 - 0.6 * k);
   hemi.intensity = 0.35 + 0.9 * k;
   scene.background.copy(NIGHT).lerp(DAWNISH, k);
   // motes
@@ -346,7 +360,8 @@ function hud(g, lit) {
   const p = g.player;
   $('h-flames').textContent = '🔥'.repeat(p.flames) + '·'.repeat(Math.max(0, TUNING.flames - p.flames));
   $('h-carried').textContent = `${p.carried}/${TUNING.carry_capacity}`;
-  $('h-lit').textContent = `${lit}/5`;
+  $('h-lit').textContent = `${lit}/${g.lanterns.length}`;
+  $('h-night').textContent = String(g.night);
   $('h-score').textContent = g.score;
   const tl = Math.max(0, g.timeLeft);
   $('h-time').textContent = `${Math.floor(tl / 60)}:${String(Math.floor(tl % 60)).padStart(2, '0')}`;
@@ -360,5 +375,5 @@ function hud(g, lit) {
 }
 
 requestAnimationFrame(frame);
-if (new URLSearchParams(location.search).has('autostart')) startGame();
+{ const q0 = new URLSearchParams(location.search); if (q0.has('autostart')) startGame(Number(q0.get('night') || 1)); }
 window.__game = () => game; // debug hook for screenshots / manual checks
