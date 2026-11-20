@@ -17,6 +17,9 @@
   #overlay h1 { margin: 0 0 8px; color: #ffc46b; }
   button { margin-top: 14px; font-size: 18px; padding: 10px 26px; border-radius: 10px; border: 0; background: #ffb35c; color: #2a1405; cursor: pointer; }
   .hidden { display: none !important; }
+  #paused { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(8, 4, 18, .55); pointer-events: none; }
+  #paused .card { padding: 20px 36px; background: #1a1030; border: 1px solid #ffb35c66; border-radius: 16px; text-align: center; }
+  #paused h1 { margin: 0 0 6px; color: #ffc46b; }
   #flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle, transparent 40%, rgba(120, 30, 160, .55)); opacity: 0; transition: opacity .25s; }
 </style>
 <script type="importmap">{ "imports": { "three": "/vendor/three.module.js" } }</script>
@@ -30,9 +33,11 @@
   <div class="chip">Điểm <b id="h-score"></b></div>
   <div class="chip">Bình minh sau <b id="h-time"></b></div>
   <div class="chip">Tỏa sáng <b id="h-pulse"></b></div>
+  <div class="chip">Lướt <b id="h-dash"></b></div>
 </div>
 <div id="hint"></div>
-<div id="help">WASD di chuyển · Chuột kéo / ← → xoay camera · Space nhảy · E nạp đèn · F tỏa sáng · R chơi lại</div>
+<div id="help">WASD di chuyển · Chuột kéo / ← → xoay camera · Space nhảy · E nạp đèn · F tỏa sáng · Shift lướt · P/Esc tạm dừng · R chơi lại</div>
+<div id="paused" class="hidden"><div class="card"><h1>Tạm dừng</h1><p>Nhấn P hoặc Esc để chơi tiếp.</p></div></div>
 <div id="flash"></div>
 <div id="overlay">
   <div class="card" id="card">

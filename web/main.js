@@ -189,8 +189,8 @@ const SFX = {
 
 // ---------- input ----------
 const keys = new Set();
-const latched = { jump: false, interact: false, pulse: false };
-const KEYMAP = { Space: 'jump', KeyE: 'interact', KeyF: 'pulse' };
+const latched = { jump: false, interact: false, pulse: false, dash: false, pause: false };
+const KEYMAP = { Space: 'jump', KeyE: 'interact', KeyF: 'pulse', ShiftLeft: 'dash', ShiftRight: 'dash', KeyP: 'pause', Escape: 'pause' };
 let yaw = 0; // degrees, sent to the sim as cam_yaw_deg
 addEventListener('keydown', (e) => {
   keys.add(e.code);
@@ -366,6 +366,8 @@ function hud(g, lit) {
   const tl = Math.max(0, g.timeLeft);
   $('h-time').textContent = `${Math.floor(tl / 60)}:${String(Math.floor(tl % 60)).padStart(2, '0')}`;
   $('h-pulse').textContent = g.pulseCooldown > 0 ? '…' : p.carried >= TUNING.pulse_cost ? 'sẵn sàng (F)' : 'cần đom đóm';
+  $('h-dash').textContent = g.dashCooldown > 0 ? '…' : 'sẵn sàng (Shift)';
+  $('paused').classList.toggle('hidden', !(g.paused && g.state === 'playing'));
   let hint = '';
   const nearL = g.lanterns.find((l) => !l.lit && Math.hypot(l.pos[0] - p.pos[0], l.pos[2] - p.pos[2]) <= TUNING.interact_radius);
   if (nearL) hint = p.carried > 0 ? `Nhấn E để nạp ánh sáng vào ${nearL.id} (${nearL.deposited}/${TUNING.lantern_cost})` : `${nearL.id} cần ${TUNING.lantern_cost - nearL.deposited} đom đóm nữa`;
