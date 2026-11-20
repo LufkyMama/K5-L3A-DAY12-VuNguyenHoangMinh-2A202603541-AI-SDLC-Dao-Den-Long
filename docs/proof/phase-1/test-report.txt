@@ -1,0 +1,43 @@
+✔ game.contract.json has all required top-level fields (1.836ms)
+✔ contract tuning is exactly what the game uses (src/tuning.js) (0.8322ms)
+✔ contract tuning lists every field from Test Contract v1.0 (0.2004ms)
+✔ night 1 has lantern_count_night1 = 5 lanterns with ids L1..L5 (0.2662ms)
+✔ golden fireflies appear only when creative is on (GUI) (78.6712ms)
+✔ headless CLI constructs the game with creative:false (1.4815ms)
+✔ snapshot 0 is pre-input state; snapshots every N; end line last; ticks exact (81.0189ms)
+✔ no inputs file -> player stands still (72.7875ms)
+✔ move [0,1] at yaw 0 travels +Z at player_speed (71.0637ms)
+✔ cam_yaw_deg rotates input: yaw 90, move [0,1] -> +X (68.1924ms)
+✔ diagonal input longer than 1 is normalised (71.1851ms)
+✔ frames keep missing fields; input at tick k affects state k+1 (77.8833ms)
+✔ jump leaves the ground and lands again (66.3124ms)
+✔ pickup within pickup_radius (inclusive), not beyond (62.9326ms)
+✔ carry_capacity caps pickups (66.2054ms)
+✔ walking collects a mote placed on the path (contract example timing) (77.6855ms)
+✔ interact within interact_radius deposits and lights the lantern (73.586ms)
+✔ partial deposit accumulates; interact is edge-triggered (71.541ms)
+✔ deposit only takes what the lantern still needs (67.3396ms)
+✔ out of interact_radius: no deposit (67.3383ms)
+✔ lighting the last lantern wins (all_lit); pre-lit lanterns score nothing (66.2236ms)
+✔ pulse stuns + pushes shades in radius, costs pulse_cost (70.2736ms)
+✔ stun lasts pulse_stun_s then shade chases again (75.6042ms)
+✔ pulse without enough light does nothing (65.2499ms)
+✔ pulse respects pulse_cooldown_s (61.4191ms)
+✔ shades chase at shade_speed (63.5836ms)
+✔ shade contact: lose a flame, drop hit_drop_ratio of fireflies, then invulnerable (62.172ms)
+✔ losing all flames ends the night (no_flames) (64.7891ms)
+✔ dawn: time runs out -> lost (dawn) (58.8075ms)
+✔ shades never enter safe_radius around a lantern; player at lantern is safe (74.1873ms)
+✔ default night spawns shades with shade_spawned events; random_shades:false spawns none (166.8219ms)
+✔ scenario ids are kept; scenario build emits no events and no score (69.3627ms)
+✔ same seed + inputs -> byte-identical output; different seed differs (245.0952ms)
+✔ malformed inputs / scenario -> exit code 2 with stderr message (446.276ms)
+✔ bad CLI usage -> non-zero exit (60.1443ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2773.1948
