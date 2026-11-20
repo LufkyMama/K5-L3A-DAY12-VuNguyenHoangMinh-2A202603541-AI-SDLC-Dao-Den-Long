@@ -196,6 +196,7 @@ addEventListener('keydown', (e) => {
   keys.add(e.code);
   if (KEYMAP[e.code]) latched[KEYMAP[e.code]] = true;
   if (e.code === 'KeyR' && game && game.state !== 'playing') startGame();
+  if (e.code === 'KeyN' && game && game.state === 'won' && currentNight === 1) startGame(2);
   if (e.code === 'Digit2' && !game) startGame(2);
   if (e.code === 'Digit1' && !game) startGame(1);
   if (e.code === 'Space') e.preventDefault();
@@ -242,6 +243,10 @@ function startGame(night = currentNight) {
     scenario = { player: { pos: [0, 0, 20] }, lanterns: ids.slice(0, Math.max(litN, q.has('shade') ? 1 : 0)).map((id) => ({ id, lit: true })) };
     if (q.has('shade')) scenario.shades = [{ id: 'S1', pos: [-2.5, 1, 26] }, { id: 'S2', kind: night === 2 ? 'big' : 'ink', pos: [3, 1, 27] }];
   }
+  if (q.has('nearwin') && night === 1) { // screenshot/playtest preset: 4 lanterns lit, standing at L5 with 5 fireflies
+    const L5 = defaultLanterns(1)[4];
+    scenario = { player: { pos: [L5.pos[0] * 0.92, 0, L5.pos[2] * 0.92], carried: 5 }, lanterns: ['L1', 'L2', 'L3', 'L4'].map((id) => ({ id, lit: true })) };
+  }
   game = new Game({ seed, night, scenario, creative: true });
   const look = NIGHT_LOOK[night];
   NIGHT.set(look.sky); scene.fog.color.set(look.fog); island.material.color.set(look.ground);
@@ -251,12 +256,26 @@ function startGame(night = currentNight) {
 $('start').addEventListener('click', () => startGame(1));
 $('start2').addEventListener('click', () => startGame(2));
 
+// ---------- high scores (Ticket-04): per night, browser storage, optional ----------
+const bestKey = (n) => `ddl.best.night${n}`;
+function getBest(n) { try { return Number(localStorage.getItem(bestKey(n))) || 0; } catch { return 0; } }
+function saveBest(n, score) { try { if (score > getBest(n)) { localStorage.setItem(bestKey(n), String(score)); return true; } } catch { /* storage blocked */ } return false; }
+function showBestOnStart() {
+  const el = $('best'); if (!el) return;
+  const b1 = getBest(1), b2 = getBest(2);
+  el.textContent = b1 || b2 ? `Kỷ lục: Đêm 1 – ${b1} điểm · Đêm 2 – ${b2} điểm` : '';
+}
+showBestOnStart();
+
 function showEnd() {
   const won = game.state === 'won';
+  const isNew = saveBest(currentNight, game.score);
   const reason = { all_lit: `Cả ${game.lanterns.length} Đèn Lồng Lớn đã sáng!`, dawn: 'Trời đã sáng mà đảo vẫn còn tối…', no_flames: 'Ngọn lửa của Mây đã tắt…' }[game.result.reason];
   $('card').innerHTML = `<h1>${won ? 'Đảo đã sáng lại!' : 'Thua rồi'}</h1><p>${NIGHT_LOOK[currentNight].name}: ${reason}</p>
-    <p>Điểm: <b>${game.score}</b></p><button id="again">Chơi lại (R)</button>`;
+    <p>Điểm: <b>${game.score}</b> · Kỷ lục: <b id="best-now">${getBest(currentNight)}</b>${isNew ? ' <b style="color:#ffd27a">(kỷ lục mới!)</b>' : ''}</p>
+    <button id="again">Chơi lại (R)</button>${won && currentNight === 1 ? ' <button id="next">Sang Đêm 2 → (N)</button>' : ''}`;
   $('again').addEventListener('click', () => startGame());
+  $('next')?.addEventListener('click', () => startGame(2));
   $('overlay').classList.remove('hidden');
 }
 
