@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PHASE = process.argv[2] || '1';
-const OUT = path.join(ROOT, 'docs', 'proof', `phase-${PHASE}`, 'playtest');
+const OUT = path.join(ROOT, 'docs', 'proof', `phase-${PHASE}`, process.argv.includes('--dist') ? 'playtest-dist' : 'playtest');
 fs.mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -28,7 +28,10 @@ const freePort = () => new Promise((r) => { const s = net.createServer(); s.list
 const CHROME = findChrome();
 if (!CHROME) { console.error('playtest: Chrome/Chromium not found (set CHROME_PATH)'); process.exit(1); }
 const webPort = await freePort(), cdpPort = await freePort();
-const server = spawn(process.execPath, [path.join(ROOT, 'server.js')], { env: { ...process.env, PORT: String(webPort) }, stdio: 'ignore' });
+const DIST = process.argv.includes('--dist');
+const server = DIST
+  ? spawn(process.execPath, [path.join(ROOT, 'tools/serve-static.mjs'), path.join(ROOT, 'dist/web'), String(webPort)], { stdio: 'ignore' })
+  : spawn(process.execPath, [path.join(ROOT, 'server.js')], { env: { ...process.env, PORT: String(webPort) }, stdio: 'ignore' });
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-chrome-'));
 const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${cdpPort}`, `--user-data-dir=${profile}`,
   '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--window-size=1280,720', '--no-first-run',
@@ -72,6 +75,7 @@ const state = () => ev(`(() => { const g = window.__game(); if (!g) return null;
   overlay: !document.getElementById('overlay').classList.contains('hidden'), card: document.getElementById('card').innerText.replace(/\\n+/g, ' / ') }; })()`);
 
 const checks = [];
+let night1Score = null;
 const check = (req, ok, detail) => { checks.push({ req, ok: !!ok, detail }); log(`${ok ? 'PASS' : 'FAIL'} ${req}: ${detail}`); };
 const d2 = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const r2 = (v) => v.map((x) => +x.toFixed(2));
@@ -172,6 +176,12 @@ try {
   await sleep(1500); s = await state(); await shot('06-end-win');
   check('Lighting all lanterns of Night 1 wins and shows the end screen', s.st === 'won' && s.overlay && s.card.includes('Đảo đã sáng lại'), `result ${JSON.stringify(s.res)}, score ${s.score}, card "${s.card}"`);
   winBonusCheck('Win bonus matches README scoring', winDep);
+  if (Number(PHASE) >= 4) {
+    const best = Number(await ev("document.getElementById('best-now')?.textContent"));
+    const hasNext = await ev("!!document.getElementById('next')");
+    check('P4-4 Night 1 win screen shows the record and a "Sang Đêm 2" button', best === s.score && hasNext, `record ${best} (score ${s.score}), next button ${hasNext}`);
+    night1Score = s.score;
+  }
 
   await tap('KeyR'); await sleep(500); s = await state();
   check('R restarts after a result', s.st === 'playing' && s.score === 0 && s.fl === 3 && s.lit === 0 && !s.overlay, `state ${s.st}, score ${s.score}, flames ${s.fl}, lit ${s.lit}`);
@@ -193,6 +203,17 @@ try {
     check('P2-9 Night 2 played with the keyboard to a win (all 6 lanterns)', s.st === 'won' && s.lit === 6 && s.card.includes('Đêm 2'), `result ${JSON.stringify(s.res)}, lit ${s.lit}/6, card "${s.card}"`);
     check('P2-9 Bóng Mực Lớn appeared during Night 2', n2.sawBig, n2.sawBig ? 'a shade with kind "big" was on the island' : 'no big shade seen');
     winBonusCheck('P2-9 Night 2 win bonus matches README scoring', n2.winDep);
+  }
+  // ---- Phase 4: record survives a reload; campaign button leads to Night 2 ----
+  if (Number(PHASE) >= 4) {
+    await send('Page.navigate', { url: `http://localhost:${webPort}/` }); await sleep(2500);
+    const bestText = await ev("document.getElementById('best').textContent");
+    check('P4-4 Records are kept after reloading the page (start screen)', night1Score !== null && bestText.includes(`Đêm 1 – ${night1Score}`), `start screen: "${bestText}"`);
+    await send('Page.navigate', { url: `http://localhost:${webPort}/?autostart&nearwin&seed=3` }); await sleep(2500);
+    await tap('KeyE'); await sleep(1500); s = await state();
+    const won1 = s?.st === 'won';
+    await clickEl('next'); await sleep(800); s = await state(); await shot('p4-campaign-night2');
+    check('P4-4 "Sang Đêm 2" after winning Night 1 starts Night 2', won1 && s.st === 'playing' && s.L.length === 6 && s.hud.startsWith('2 |'), `won night 1: ${won1}; now HUD: ${s.hud}`);
   }
   check('No JavaScript errors on the page', pageErrors.length === 0, pageErrors.length ? pageErrors.join(' ; ') : 'none');
 } catch (e) {

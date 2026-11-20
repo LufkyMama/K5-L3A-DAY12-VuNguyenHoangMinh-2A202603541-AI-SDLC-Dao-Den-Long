@@ -133,6 +133,21 @@ if (Number(PHASE) >= 3) {
   rows.push({ req: 'P3-7 No pause/dash → identical to the phase-2 tag', name: 'regress-phase-2', cmd: 'node tools/regress.mjs phase-2 --drop=paused --skip=p3-', expect: 'every case identical (only the new "paused" field ignored)', got: rgLine, ok: rg.status === 0, file: '-' });
 }
 
+// ---- Phase 4 (Ticket-04): performance, stability (fuzz), regression against the phase-3 tag ----
+if (Number(PHASE) >= 4) {
+  const bench = spawnSync(process.execPath, ['tools/bench.mjs'], { cwd: ROOT, encoding: 'utf8' });
+  const bj = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/proof/phase-4/bench.json'), 'utf8'));
+  rows.push({ req: 'P4-1 Performance: full night via CLI < 2 s, gameplay step < 0.5 ms', name: 'bench', cmd: 'npm run bench', expect: 'both nights reach dawn (18000 / 21600 ticks) under both limits',
+    got: bj.results.map((r) => `night ${r.night}: ${r.end.ticks} ticks, CLI ${r.cli_ms_median} ms, step ${r.step_ms_avg} ms (${r.realtime_factor}× real time)`).join('<br>'), ok: bench.status === 0 && bj.ok, file: 'bench.json' });
+  const fz = spawnSync(process.execPath, ['tools/fuzz.mjs', '300', '2026'], { cwd: ROOT, encoding: 'utf8' });
+  const fj = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/proof/phase-4/fuzz.json'), 'utf8'));
+  rows.push({ req: 'P4-2 Stability: 300 seeded fuzz cases through the CLI', name: 'fuzz', cmd: 'npm run fuzz -- 300 2026', expect: '0 crashes; valid → exit 0 + all invariants; malformed → exit 2; 30 re-runs byte-identical',
+    got: `${fj.valid} valid, ${fj.malformed} malformed (${Object.entries(fj.byMalformedKind).map(([k, v]) => `${k}×${v}`).join(', ')}), ${fj.crashes} crashes, ${fj.failures.length} failures, ${fj.deterministicChecked} determinism re-runs, ${fj.seconds}s`, ok: fz.status === 0 && fj.ok, file: 'fuzz.json' });
+  const rg4 = spawnSync(process.execPath, ['tools/regress.mjs', 'phase-3'], { cwd: ROOT, encoding: 'utf8' });
+  const rg4Line = (rg4.stdout.trim().split(/\r?\n/).at(-1) || rg4.stderr).trim();
+  rows.push({ req: 'P4-6 No regression: identical to the phase-3 tag', name: 'regress-phase-3', cmd: 'node tools/regress.mjs phase-3', expect: 'every case identical (no new output fields in Phase 4)', got: rg4Line, ok: rg4.status === 0, file: '-' });
+}
+
 // ---- determinism ----
 const a = headless('determinism-a', { seed: 42, ticks: 18000, inputs: apFile, every: 10 });
 const b = headless('determinism-b', { seed: 42, ticks: 18000, inputs: apFile, every: 10 });
@@ -186,10 +201,10 @@ Full 300 s night with default fireflies, no shades (seed 7, 18000 ticks, snapsho
 
 | File | Shows |
 |---|---|
-| [gui-start.png](gui-start.png) | Start screen with story + goal |
-| [gui-play.png](gui-play.png) | Mây (nón lá + hat lantern), fireflies, HUD (flames, carried, lanterns, score, time to dawn, pulse) |
-| [gui-shades.png](gui-shades.png) | Two Bóng Mực held at the edge of L1's safe circle (purple-black = danger) |
-| [gui-lit3.png](gui-lit3.png) | 3/5 lanterns lit: island and sky visibly brighter, lit lantern glows warm orange |
+| [gui-start.png](${PHASE === '1' ? '' : '../phase-1/'}gui-start.png) | Start screen with story + goal |
+| [gui-play.png](${PHASE === '1' ? '' : '../phase-1/'}gui-play.png) | Mây (nón lá + hat lantern), fireflies, HUD (flames, carried, lanterns, score, time to dawn, pulse) |
+| [gui-shades.png](${PHASE === '1' ? '' : '../phase-1/'}gui-shades.png) | Two Bóng Mực held at the edge of L1's safe circle (purple-black = danger) |
+| [gui-lit3.png](${PHASE === '1' ? '' : '../phase-1/'}gui-lit3.png) | 3/5 lanterns lit: island and sky visibly brighter, lit lantern glows warm orange |
 
 ## 6. GUI playtest with real keyboard/mouse
 

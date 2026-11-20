@@ -1,0 +1,55 @@
+{
+  "generated": "2026-11-20T13:21:12.904Z",
+  "machine": "Windows_NT 10.0.26300 · AMD Ryzen 5 5625U with Radeon Graphics ×12 · 15 GB · Node v26.7.0",
+  "thresholds": {
+    "cli_ms_per_night": 2000,
+    "step_ms": 0.5
+  },
+  "results": [
+    {
+      "night": 1,
+      "ticks_requested": 18000,
+      "end": {
+        "type": "end",
+        "ticks": 18000,
+        "state": "lost",
+        "score": 0
+      },
+      "output_mb": 34.4,
+      "cli_ms_median": 331,
+      "cli_ms_runs": [
+        330,
+        331,
+        339
+      ],
+      "ticks_per_s_cli": 54415,
+      "step_ms_avg": 0.0031,
+      "realtime_factor": 5316,
+      "shades_at_end": 5,
+      "ok": true
+    },
+    {
+      "night": 2,
+      "ticks_requested": 21600,
+      "end": {
+        "type": "end",
+        "ticks": 21600,
+        "state": "lost",
+        "score": 0
+      },
+      "output_mb": 43.6,
+      "cli_ms_median": 429,
+      "cli_ms_runs": [
+        410,
+        429,
+        447
+      ],
+      "ticks_per_s_cli": 50345,
+      "step_ms_avg": 0.0025,
+      "realtime_factor": 6723,
+      "shades_at_end": 6,
+      "ok": true
+    }
+  ],
+  "ok": true
+}
