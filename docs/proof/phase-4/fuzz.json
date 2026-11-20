@@ -1,20 +1,30 @@
 {
   "n": 300,
   "seed": 2026,
-  "valid": 268,
-  "malformed": 32,
+  "valid": 270,
+  "malformed": 30,
   "crashes": 0,
   "deterministicChecked": 30,
   "failures": [],
   "byMalformedKind": {
-    "move-range": 8,
-    "bad-json-scenario": 5,
-    "bad-json-inputs": 7,
-    "bad-lantern-id": 3,
-    "bad-button": 3,
-    "bad-pos": 3,
-    "bad-kind": 3
+    "bad-json-inputs": 4,
+    "bad-json-scenario": 4,
+    "tick-order": 4,
+    "move-range": 4,
+    "bad-button": 4,
+    "bad-lantern-id": 4,
+    "bad-kind": 3,
+    "bad-pos": 3
   },
-  "seconds": 23.1,
+  "coverage": {
+    "night2": 155,
+    "pause": 128,
+    "dash": 172,
+    "big": 38,
+    "won": 28,
+    "lost_no_flames": 94,
+    "lost_dawn": 11
+  },
+  "seconds": 20.6,
   "ok": true
 }

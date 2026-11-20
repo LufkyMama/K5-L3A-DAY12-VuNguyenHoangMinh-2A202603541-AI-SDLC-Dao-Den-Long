@@ -1,6 +1,7 @@
 # Đảo Đèn Lồng
 
-> 🎬 **Video demo:** sẽ được đính kèm ở Release `v1.0.0` (Phase 4).
+> 🎬 **Video demo:** [docs/demo/demo.mp4](docs/demo/demo.mp4) (dưới 5 phút; cũng đính kèm ở Release `v1.0.0`). Phần chơi trong video do bot điều khiển bằng phím thật, có ghi rõ ngay đầu video.
+> 📦 **Bản phát hành:** Release `v1.0.0` có `dao-den-long-v1.0.0-web.zip` (thư mục web tĩnh). Ghi chú: [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
 > Bài lab Day 12 · AI SDLC · cá nhân · 2A202603541 – Vu Nguyen Hoang Minh. Đề bài gốc: [docs/lab/](docs/lab/README.md).
 
 Game 3D góc nhìn thứ ba. **Mây**, người giữ đèn nhỏ tuổi đội nón lá treo đèn lồng, chạy khắp hòn đảo giữa biển mây gom **đom đóm** để thắp lại các **Đèn Lồng Lớn** trước bình minh, đồng thời né **Bóng Mực** trong sương đen.
@@ -51,7 +52,10 @@ Chọn đêm ở màn bắt đầu (nút hoặc phím 1/2). Đom đóm được 
 node src/headless.js --seed 1 --night 1|2 --ticks 600 --out out.jsonl [--scenario s.json] [--inputs i.json] [--snapshot-every 10]
 npm test               # 42 test hành vi, chạy qua CLI headless thật
 npm run proof -- 1     # tạo lại bằng chứng Phase 1 → docs/proof/phase-1/REPORT.md
-npm run playtest -- 1  # chơi thử bản GUI bằng phím/chuột thật qua Chrome → docs/proof/phase-1/playtest/PLAYTEST.md
+npm run playtest -- 4  # chơi thử bản GUI bằng phím/chuột thật qua Chrome → docs/proof/phase-4/playtest/PLAYTEST.md
+npm run bench          # hiệu năng: trọn một đêm mỗi loại qua CLI (ngưỡng < 2 s/đêm, < 0.5 ms/bước)
+npm run fuzz           # ổn định: 300 ca ngẫu nhiên có seed qua CLI, kiểm bất biến + mã thoát + tất định
+npm run build          # bản phát hành: dist/web (web tĩnh) + dist/dao-den-long-v1.0.0-web.zip
 ```
 
 - `game.contract.json`: `build_cmd` = `npm install`, `headless_cmd` = `node src/headless.js`. Tuning khớp đúng `src/tuning.js` (có test kiểm tra).
@@ -77,8 +81,10 @@ Bằng chứng phần cũ vẫn đúng: `tests/creative.test.js` (Đom Đóm Và
 
 | | |
 |---|---|
+| Bằng chứng Phase 4 (cộng dồn cả 4 phase) | [docs/proof/phase-4/REPORT.md](docs/proof/phase-4/REPORT.md) · [bench.json](docs/proof/phase-4/bench.json) · [fuzz.json](docs/proof/phase-4/fuzz.json) · [chơi thử bản dev](docs/proof/phase-4/playtest/PLAYTEST.md) · [chơi thử bản build](docs/proof/phase-4/playtest-dist/PLAYTEST.md) |
+| Bằng chứng Phase 2, 3 | [phase-2/REPORT.md](docs/proof/phase-2/REPORT.md) · [phase-3/REPORT.md](docs/proof/phase-3/REPORT.md) |
 | Bằng chứng Phase 1 | [docs/proof/phase-1/REPORT.md](docs/proof/phase-1/REPORT.md) (test, scenario, autopilot thắng cả đêm, tất định, ảnh GUI) · [chơi thử GUI](docs/proof/phase-1/playtest/PLAYTEST.md) (15 kiểm tra bằng phím/chuột thật) |
-| Yêu cầu, tiêu chí, giả định | [docs/notes/phase-1.md](docs/notes/phase-1.md) |
+| Yêu cầu, tiêu chí, giả định | [phase-1](docs/notes/phase-1.md) · [phase-2](docs/notes/phase-2.md) · [phase-3](docs/notes/phase-3.md) · [phase-4](docs/notes/phase-4.md) (Ticket-02/03/04 tự đặt, vì không có giảng viên phát hành) |
 | Đánh giá từng phase | [docs/notes/evaluation.md](docs/notes/evaluation.md) |
 | Nhật ký dùng AI và token | [docs/notes/ai-log.md](docs/notes/ai-log.md) |
 | Retro | [docs/notes/retro.md](docs/notes/retro.md) |
@@ -93,7 +99,7 @@ src/headless.js   CLI headless · src/validate.js kiểm tra file inputs/scenari
 web/              bản chơi Three.js (render, input, HUD, âm thanh)
 server.js         server tĩnh cho npm start
 tests/            test + tests/scenarios/ (scenario headless có tên)
-tools/            autopilot.js, proof.js
+tools/            autopilot.js, proof.js, playtest.mjs, regress.mjs, invariants.mjs, fuzz.mjs, bench.mjs, build.mjs, demo-video.mjs
 docs/             lab/ (đề), notes/, proof/
 ```
 

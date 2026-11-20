@@ -91,3 +91,36 @@ Không có lỗi code. Đã bổ sung theo góp ý: `--night 3` phải đúng m�
 
 ### Điểm mơ hồ còn lại (ghi trong giả định 5–6 của phase-3.md)
 Nút nhấn đúng tick bỏ tạm dừng vẫn có tác dụng; lướt không phụ thuộc độ lớn cần điều khiển; `tick` (gồm tick dừng) dùng cho sự kiện, snapshot và `end.ticks`.
+
+## Phase 4 (Ticket-04 tự đặt: hiệu năng, ổn định, chiến dịch, phát hành)
+
+**Kết quả:** `npm test` 70/70 · `npm run proof -- 4` PASS, 19 dòng cộng dồn 4 phase (gồm bench, fuzz, hồi quy so với `phase-2` và `phase-3`) · chơi thử GUI 25/25 trên **cả bản dev lẫn bản build phát hành** · fuzz 300 ca: 0 crash, 0 vi phạm. Chi tiết: [docs/proof/phase-4/REPORT.md](../proof/phase-4/REPORT.md).
+
+| Hạng mục | Trạng thái |
+|---|---|
+| P4-1 hiệu năng | Đạt: một đêm đầy đủ qua CLI ~0.3–0.5 s (ngưỡng 2 s); bước gameplay ~0.003–0.005 ms (ngưỡng 0.5 ms). Bench giờ bắt buộc đêm phải kết thúc đúng ở bình minh |
+| P4-2 ổn định | Đạt. Fuzz phủ: 155 ca Đêm 2, 128 có tạm dừng, 172 có lướt, 38 có Bóng Mực Lớn, 28 ca thắng, đủ 8 loại file hỏng |
+| P4-3 bộ kiểm bắt lỗi thật | Đạt: 18 kiểu làm hỏng đầu ra đều bị bắt (test) |
+| P4-4 kỷ lục, "Sang Đêm 2" | Đạt (playtest). Nút "Sang Đêm 2" được kiểm qua preset `nearwin` (không chơi trọn Đêm 1 lần hai để tiết kiệm thời gian) |
+| P4-5 bản build | Đạt: test build + chơi thử 25/25 trên `dist/web`; zip giải nén bằng Windows khớp từng file |
+| P4-6 không hồi quy | Đạt: `regress phase-3` giống hệt |
+| P4-7 video, retro, README | Video quay tự động (bot chơi, có ghi rõ); retro và README đã cập nhật |
+
+### Review độc lập Phase 4
+Không có lỗi chức năng. Các điểm yếu đã sửa:
+| Điểm yếu | Sửa |
+|---|---|
+| Bộ kiểm bất biến bỏ sót: `carried` vượt sức chứa, `flames` tăng lại, `time_left_s` âm hoặc lệch, sai thứ tự event/snapshot, id trùng, `state`/`kind` lạ, đổi đêm, đèn biến mất, dữ liệu event sai | Thêm tất cả, kèm test cho từng kiểu |
+| Cài lỗi "đồng hồ vẫn chạy khi tạm dừng" vào sim thì fuzz vẫn PASS | Thêm bất biến `time_left_s + sim_tick/60` không đổi; có test mô phỏng đúng lỗi này |
+| Fuzz không có ca thắng; loại hỏng `tick-order` không được sinh | Cứ 10 ca có 1 ca gần thắng (28 ca thắng); các loại hỏng được sinh luân phiên |
+| Bench PASS cả khi đêm không tới bình minh | Bắt buộc `end.state = lost` và lý do `dawn` |
+| Chưa chứng minh bản build chạy dưới thư mục con trong trình duyệt | Chưa làm: reviewer đã kiểm bằng HTTP (mọi file 200); ghi nhận là hạn chế |
+
+### AI sai ở đâu
+| Lỗi | Phát hiện | Sửa |
+|---|---|---|
+| Video lần 1: tab ghi hình mở chung cửa sổ nên tab game bị xuống nền, quay ra màn đen 12 s | Tự kiểm khung hình (giải mã video, đo độ sáng) | Mở tab ghi hình thành cửa sổ riêng, tắt cơ chế "occlusion" của Windows |
+| Video lần 2: trình phát chỉ thấy 12.4 s | Đọc cấu trúc MP4: `MediaRecorder` chỉ ghi độ dài phân đoạn đầu vào `mvhd` | `tools/mp4-fix-duration.mjs` ghi lại độ dài thật |
+| Video lần 2: cả video là slide mở đầu đứng yên | Xem ảnh trích từ nhiều mốc | Screencast dừng sau khi chuyển trang → khởi động lại sau mỗi lần chuyển trang |
+| Video lần 3–4: vẫn đứng yên ở slide mở đầu | Xem ảnh trích | Screencast bỏ hẳn, thay bằng chụp màn hình liên tục; tab ghi hình kẹt khi nhận hai ảnh giống hệt (`img.src` không đổi thì không có `onload`) → bỏ qua ảnh trùng |
+| Công cụ kiểm video tua sai nên luôn ra khung đầu | So với cách phát liên tục 4× | Kiểm bằng cách phát liên tục và chụp khi đang phát; video cuối (131 s) có đủ cảnh: slide, Đêm 1, Đêm 2, slide bằng chứng |

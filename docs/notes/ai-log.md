@@ -31,6 +31,16 @@ Công cụ: **Claude Code** (model Claude Opus 5.5), một phiên duy nhất cho
 | Build | sim (pause/dash) → CLI → GUI → regress tool → proof/playtest | 4 commit |
 | Review | `contract-reviewer` (~172k token, có thử cố ý gây lỗi cho regress) | 0 lỗi code; 4 góp ý đã sửa |
 
+## Phase 4
+
+| Bước | Việc | Ghi chú |
+|---|---|---|
+| Yêu cầu | Ticket-04 tự đặt theo README lab (hoàn thiện, đo hiệu năng, phát hành) | |
+| Test trước | `tests/phase4.test.js` (đỏ vì chưa có module) | |
+| Build | invariants → fuzz → bench → build/zip → GUI kỷ lục + chiến dịch → playtest bản build → video | Phiên bị ngắt một lần, nhờ commit WIP và ghi chú bộ nhớ nên làm tiếp được |
+| Review | `contract-reviewer` (~218k token, có cài lỗi vào sim trong bản sao để thử fuzz) | 0 lỗi chức năng; bộ kiểm bất biến được bổ sung nhiều |
+| Video | Không có ffmpeg → quay bằng Chrome có cửa sổ đặt ngoài màn hình + MediaRecorder | 3 lần quay mới đúng (xem evaluation) |
+
 ### Token / chi phí (ước tính)
 
 | Phase | Token ước tính | Cách tiết kiệm |
@@ -39,5 +49,7 @@ Công cụ: **Claude Code** (model Claude Opus 5.5), một phiên duy nhất cho
 
 | 2 | ~250–300k (gồm ~138k của agent review) | Viết ticket + test trước để agent code đúng ngay; chỉ in dòng tóm tắt test; reviewer chỉ xem phần thay đổi |
 | 3 | ~250k (gồm ~172k của agent review) | Review là phần tốn nhất; phase sau giới hạn reviewer vào phần thay đổi |
+| 4 | ~400–500k (gồm ~218k của agent review và 3 lần quay/kiểm video) | Review và video là phần tốn nhất; lẽ ra nên kiểm khung hình của video ngay sau lần quay đầu |
+| **Tổng** | **~1.6–1.8M token** (ước tính) | |
 
 > Đây là ước tính của agent, không phải số đo. Số thật xem bằng `/cost` trong Claude Code (hoặc trang usage) rồi cập nhật vào bảng.
