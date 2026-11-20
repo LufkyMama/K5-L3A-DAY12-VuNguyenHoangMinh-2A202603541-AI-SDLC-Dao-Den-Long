@@ -1,5 +1,10 @@
 # Changelog
 
+## phase-3 (Ticket-03 tự đặt)
+- Tạm dừng (`pause`, P/Esc): `tick` tăng, `sim_tick`/thời gian/thực thể đứng yên; snapshot có `paused`.
+- Lướt (`dash`, Shift): 3.6 m trong 0.2 s, hồi chiêu 2 s.
+- Contract v1.2. Công cụ `tools/regress.mjs` so đầu ra với tag cũ (21/21 giống `phase-2`).
+
 ## phase-2 (Ticket-02 tự đặt)
 - Đêm 2 – Rừng Sương (`--night 2`): 6 đèn, 360 s, sương xanh rừng.
 - Kẻ địch mới Bóng Mực Lớn (`kind: "big"`).

@@ -6,6 +6,7 @@ Requirements: `docs/notes/phase-N.md` (copied from the lab board) + `game.contra
 ## Commands
 - Install: `npm install` · Play: `npm start` → http://localhost:8080
 - Tests: `npm test` (node:test, runs the real headless CLI) · Evidence: `npm run proof -- <phase>`
+- Regression vs an older tag: `node tools/regress.mjs phase-N --drop=<new fields> --skip=<new scenario prefixes>`
 - GUI playtest: `npm run playtest -- <phase>` (needs Chrome; starts its own server, plays with real key/mouse events, writes `docs/proof/phase-N/playtest/`)
 - Headless: `node src/headless.js --seed 1 --night 1|2 --ticks 600 --out out.jsonl [--scenario f] [--inputs f] [--snapshot-every n]`
 
@@ -24,4 +25,5 @@ Requirements: `docs/notes/phase-N.md` (copied from the lab board) + `game.contra
 - Expected values in tests come from the ticket/contract text, never from copying program output.
 - A Stop hook runs the tests and blocks finishing while they are red. Don't bypass it; fix the code.
 - When a ticket changes a rule: update `docs/notes/phase-N.md` (why), the code, then fix or retire old tests with a reason.
+- Pause (Phase 3): `tick` counts every tick, `steps` (= sim_tick) only gameplay ticks; time, timers and events use gameplay steps, event/snapshot ticks use `tick`.
 - Small commits, one concern each. Tag `phase-N` only after `npm run proof` passes.

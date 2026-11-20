@@ -26,6 +26,9 @@ npm start        # rồi mở http://localhost:8080
 | Space | Nhảy |
 | E | Nạp đom đóm vào Đèn Lồng Lớn ở gần (≤ 2.5 m) |
 | F | Tỏa sáng: tốn 1 đom đóm, làm choáng và đẩy lùi Bóng Mực trong 6 m |
+| Shift | Lướt: lao 3.6 m trong 0.2 s theo hướng đang đi, hồi chiêu 2 s |
+| P / Esc | Tạm dừng / chơi tiếp |
+| 1 / 2 | Chọn đêm ở màn bắt đầu |
 | R | Chơi lại sau khi thắng/thua |
 
 Chọn đêm ở màn bắt đầu (nút hoặc phím 1/2). Đom đóm được **nhặt tự động** khi chạm (túi chứa tối đa 5). Mỗi đèn cần 5 đom đóm. Bóng Mực không dám vào vòng 4 m quanh đèn **đã thắp** (vòng sáng mờ trên mặt đất); đèn chưa thắp không che chở được. Bị Bóng Mực chạm: mất 1 ngọn lửa (có 3), rơi hết đom đóm đang mang, bất tử 1.5 s.
@@ -55,7 +58,9 @@ npm run playtest -- 1  # chơi thử bản GUI bằng phím/chuột thật qua C
 - `fall_enabled: false`: mép đảo là tường, không thể rơi khỏi đảo nên không có sự kiện `player_hit` với `by: "fall"`. Không trường tuning nào là `null`.
 - File inputs/scenario sai định dạng → mã thoát 2. Lỗi khác (ví dụ `--night 2`) → mã 1.
 - Contract **v1.1** (Phase 2, tương thích ngược): thêm `--night 2`, `night` trong snapshot, `kind` (`ink`/`big`) cho Bóng Mực, tuning `lantern_count_night2`, `night2_duration_s`, `big_shade_speed`, `big_shade_hit_radius`.
-- Giả định cho các chỗ đề còn mơ hồ: [phase-1.md](docs/notes/phase-1.md), [phase-2.md](docs/notes/phase-2.md).
+- Contract **v1.2** (Phase 3): input `pause` và `dash`; snapshot thêm `paused`; khi tạm dừng `tick` vẫn tăng nhưng `sim_tick` và `time_left_s` đứng yên; sự kiện mới `pause`, `dash`; tuning `dash_speed_mult`, `dash_duration_s`, `dash_cooldown_s`.
+- `node tools/regress.mjs <tag-cũ> --drop=<trường mới>`: so đầu ra headless với một tag cũ để chứng minh không hồi quy.
+- Giả định cho các chỗ đề còn mơ hồ: [phase-1.md](docs/notes/phase-1.md), [phase-2.md](docs/notes/phase-2.md), [phase-3.md](docs/notes/phase-3.md).
 
 ## Sáng tạo của tôi
 

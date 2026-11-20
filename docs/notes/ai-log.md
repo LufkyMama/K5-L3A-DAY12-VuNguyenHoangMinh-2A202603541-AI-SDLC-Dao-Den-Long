@@ -22,6 +22,15 @@ Công cụ: **Claude Code** (model Claude Opus 5.5), một phiên duy nhất cho
 | Build | tuning/NIGHTS → sim → validate/CLI → GUI → autopilot/proof/playtest | 5 commit nhỏ |
 | Review | agent `contract-reviewer` (~138k token) | Không có lỗi code; 6 góp ý về test yếu đã sửa |
 
+## Phase 3
+
+| Bước | Việc | Ghi chú |
+|---|---|---|
+| Yêu cầu | Ticket-03 tự đặt, lấy ý từ chính contract (`dash`, `sim_tick` khác `tick`) | |
+| Test trước | `tests/phase3.test.js` (9 test đỏ lúc đầu) | |
+| Build | sim (pause/dash) → CLI → GUI → regress tool → proof/playtest | 4 commit |
+| Review | `contract-reviewer` (~172k token, có thử cố ý gây lỗi cho regress) | 0 lỗi code; 4 góp ý đã sửa |
+
 ### Token / chi phí (ước tính)
 
 | Phase | Token ước tính | Cách tiết kiệm |
@@ -29,5 +38,6 @@ Công cụ: **Claude Code** (model Claude Opus 5.5), một phiên duy nhất cho
 | 1 | ~450–550k token tổng (kể cả chơi thử GUI và ~90k của agent review) (input có cache + output); phần lớn là ngữ cảnh đọc tài liệu lab và viết ~1.5k dòng code/test/doc | Đọc yêu cầu một lần và trích đúng phần cần; chỉ dùng 1 subagent (review độc lập, ~90k token); chạy test bằng một lệnh và chỉ in dòng tóm tắt (`grep ℹ`); ảnh chụp chỉ xem những tấm cần |
 
 | 2 | ~250–300k (gồm ~138k của agent review) | Viết ticket + test trước để agent code đúng ngay; chỉ in dòng tóm tắt test; reviewer chỉ xem phần thay đổi |
+| 3 | ~250k (gồm ~172k của agent review) | Review là phần tốn nhất; phase sau giới hạn reviewer vào phần thay đổi |
 
 > Đây là ước tính của agent, không phải số đo. Số thật xem bằng `/cost` trong Claude Code (hoặc trang usage) rồi cập nhật vào bảng.

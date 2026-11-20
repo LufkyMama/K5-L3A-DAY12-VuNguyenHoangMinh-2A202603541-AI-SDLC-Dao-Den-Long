@@ -71,3 +71,23 @@ Agent chạy ~75 lượt headless đối kháng của riêng nó và đối chi�
 
 ### Review độc lập Phase 2
 Không có lỗi code. Đã bổ sung theo góp ý: `--night 3` phải đúng mã 1; kiểm vị trí cả 6 đèn; con thứ 6 là `big` và tối đa 6 con; Bóng Mực đang choáng vẫn bị đẩy ra khi đèn sáng; bán kính chạm của Bóng Mực Lớn theo đường chéo lệch gốc; dòng proof CR-1 kiểm thêm việc Bóng Mực thật sự vào trong vòng 4 m.
+
+## Phase 3 (Ticket-03 tự đặt: tạm dừng + lướt)
+
+**Kết quả:** `npm test` 65/65 · `npm run proof -- 3` PASS (gồm dòng hồi quy so với tag `phase-2`: 21/21 giống hệt) · chơi thử GUI 22/22 (thêm P tạm dừng, P tiếp tục, Shift lướt bằng phím thật). Chi tiết: [docs/proof/phase-3/REPORT.md](../proof/phase-3/REPORT.md).
+
+| Hạng mục | Trạng thái |
+|---|---|
+| P3-1…P3-9 | Đạt |
+| Hỏng phase trước? | Không: `tools/regress.mjs phase-2` cho 21/21 kịch bản giống từng byte (bỏ trường mới `paused`). Reviewer thử cố ý gây lỗi trong bản sao thì công cụ báo đúng là khác (9/21, 0/21) |
+
+### AI sai ở đâu
+| Lỗi | Phát hiện | Sửa |
+|---|---|---|
+| Chèn `'\n'` vào template qua heredoc + `node -e` làm sinh ký tự xuống dòng thật giữa regex, `proof.js` lỗi cú pháp | `node --check` | Sửa theo số dòng bằng script ở file riêng; thêm thói quen `node --check` sau mỗi patch |
+| `regress.mjs` chạy cả kịch bản `p3-*` dùng tính năng mới nên báo FAIL giả | Đọc dòng proof bị FAIL | Thêm `--skip=p3-` |
+| `regress.mjs` dùng lại file kết quả của ca trước khi cả hai bản cùng lỗi (có thể báo SAME sai) | Review độc lập | Xóa file trước mỗi lần chạy |
+| Test P3-7 so HEAD với chính HEAD; test hồi chiêu không chạm đúng mốc | Review độc lập | P3-7 dựa vào dòng regress trong proof (ghi rõ); thêm test đúng mốc hồi chiêu, tạm dừng giữa lúc lướt, hồi chiêu đứng yên khi dừng |
+
+### Điểm mơ hồ còn lại (ghi trong giả định 5–6 của phase-3.md)
+Nút nhấn đúng tick bỏ tạm dừng vẫn có tác dụng; lướt không phụ thuộc độ lớn cần điều khiển; `tick` (gồm tick dừng) dùng cho sự kiện, snapshot và `end.ticks`.

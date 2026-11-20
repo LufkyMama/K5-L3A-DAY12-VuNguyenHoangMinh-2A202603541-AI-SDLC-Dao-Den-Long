@@ -12,4 +12,5 @@ description: Run all verification for the current phase and regenerate evidence 
 5. Single still screenshots (optional, needs Chrome): run `npm start` in the background, then
    `chrome --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --window-size=1280,720 --virtual-time-budget=3000 --screenshot=docs/proof/phase-N/gui-X.png "http://localhost:8080/?autostart&seed=5[&lit=3][&shade]"`
    and look at the PNG before claiming what it shows.
-6. Commit the evidence together with the code it proves, then tag.
+6. Regression: `node tools/regress.mjs phase-<N-1> --drop=<fields added this phase> --skip=p<N>-` must be all SAME (proof runs it from Phase 3 on).
+7. Commit the evidence together with the code it proves, then tag.
