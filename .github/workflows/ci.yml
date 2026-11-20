@@ -1,0 +1,21 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm test
+      - name: Headless smoke (contract command)
+        run: |
+          node src/headless.js --seed 1 --night 1 --ticks 600 --out out.jsonl
+          tail -n 1 out.jsonl
+      - name: Evidence (proof report must PASS)
+        run: npm run proof -- 1
