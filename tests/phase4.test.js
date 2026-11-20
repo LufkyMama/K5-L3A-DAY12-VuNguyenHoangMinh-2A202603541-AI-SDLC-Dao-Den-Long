@@ -60,3 +60,21 @@ test('P4-5 build makes a self-contained static web folder + zip with relative pa
   assert.ok(zip, 'zip exists');
   assert.equal(fs.readFileSync(path.join(out, zip)).subarray(0, 2).toString(), 'PK');
 });
+
+test('P4-3 (after review) new invariants catch the mutations that used to slip through', () => {
+  // a real run with a pause in the middle: ticks 20..39 are paused
+  const r = headless({ scenario: quiet({ shades: [{ id: 'A', pos: [10, 1, 0] }] }), ticks: 60, every: 10,
+    inputs: { frames: [{ tick: 0, move: [0, 1] }, { tick: 20, pause: true }, { tick: 21, pause: false }, { tick: 40, pause: true }] } });
+  assert.deepEqual(checkRun(r.lines, ctx), []);
+  const broken = (mut) => { const l = clone(r.lines); mut(l); return checkRun(l, ctx); };
+  const at = (l, t) => l.find((x) => x.type === 'snapshot' && x.tick === t);
+  // clock keeps running during the pause (the "time_left uses tick instead of sim_tick" bug)
+  assert.ok(broken((l) => { at(l, 30).time_left_s -= 10 / 60; at(l, 40).time_left_s -= 20 / 60; at(l, 50).time_left_s -= 20 / 60; at(l, 60).time_left_s -= 20 / 60; }).length > 0, 'clock ran while paused');
+  assert.ok(broken((l) => { at(l, 30).player.carried = T.carry_capacity + 5; }).length > 0, 'carried above capacity');
+  assert.ok(broken((l) => { at(l, 30).player.flames = 2; at(l, 40).player.flames = 3; }).length > 0, 'flames went back up');
+  assert.ok(broken((l) => { at(l, 30).time_left_s = -1; }).length > 0, 'negative time');
+  assert.ok(broken((l) => { at(l, 30).state = 'dancing'; }).length > 0, 'unknown state');
+  assert.ok(broken((l) => { at(l, 30).shades.push({ ...at(l, 30).shades[0] }); }).length > 0, 'duplicate shade id');
+  assert.ok(broken((l) => { at(l, 30).lanterns.pop(); }).length > 0, 'lantern disappeared');
+  assert.ok(broken((l) => { const e = l.findIndex((x) => x.type === 'event'); const [ev] = l.splice(e, 1); l.splice(l.length - 1, 0, ev); }).length > 0, 'event moved after a later snapshot');
+});

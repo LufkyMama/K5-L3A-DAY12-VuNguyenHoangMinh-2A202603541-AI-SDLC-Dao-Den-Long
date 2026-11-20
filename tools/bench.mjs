@@ -39,7 +39,7 @@ for (const night of Object.keys(NIGHTS).map(Number)) {
     cli_ms_median: +times[1].toFixed(0), cli_ms_runs: times.map((t) => +t.toFixed(0)),
     ticks_per_s_cli: Math.round(end.ticks / (times[1] / 1000)),
     step_ms_avg: +stepMs.toFixed(4), realtime_factor: Math.round((1000 / 60) / stepMs),
-    shades_at_end: g.shades.length, ok: times[1] < LIMIT_CLI_MS && stepMs < LIMIT_STEP_MS && end.ticks === ticks,
+    shades_at_end: g.shades.length, ok: times[1] < LIMIT_CLI_MS && stepMs < LIMIT_STEP_MS && end.ticks === ticks && end.state === 'lost' && g.result?.reason === 'dawn', // the night must really reach dawn
   });
 }
 fs.rmSync(tmp, { recursive: true, force: true });

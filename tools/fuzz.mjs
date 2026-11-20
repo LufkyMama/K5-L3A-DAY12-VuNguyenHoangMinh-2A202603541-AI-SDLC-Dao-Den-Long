@@ -38,10 +38,18 @@ function makeCase(r, i) {
     for (const b of ['jump', 'interact', 'pulse', 'dash', 'pause']) if (r() < (b === 'pause' ? 0.05 : 0.25)) f[b] = r() < 0.5;
     frames.push(f); t += int(1, 40);
   }
+  if (i % 10 === 4) {
+    // near-win case so the win path (bonus, early stop) is fuzzed too: all lanterns but L1 lit, standing next to L1 with fireflies
+    sc.lanterns = Array.from({ length: LANTERNS[night] - 1 }, (_, k) => ({ id: `L${k + 2}`, lit: true }));
+    sc.player = { pos: [0, 0, night === 1 ? 23 : 26], carried: 5, flames: 3 };
+    sc.shades = []; sc.random_shades = false;
+    frames.unshift({ tick: 0, move: [0, 0], interact: true }); frames[1] && (frames[1].tick = Math.max(frames[1].tick, 1));
+  }
   const c = { i, night, seed: int(0, 1e6), ticks: int(200, 3000), every: int(1, 20), scenario: r() < 0.85 ? sc : null, inputs: r() < 0.9 ? { frames } : null, malformed: null };
-  if (r() < 0.12) {
-    // deliberate breakage: each must be rejected with exit code 2
-    c.malformed = pick(['bad-json-inputs', 'bad-json-scenario', 'tick-order', 'move-range', 'bad-button', 'bad-lantern-id', 'bad-kind', 'bad-pos']);
+  const KINDS = ['bad-json-inputs', 'bad-json-scenario', 'tick-order', 'move-range', 'bad-button', 'bad-lantern-id', 'bad-kind', 'bad-pos'];
+  if (i % 10 === 9) {
+    // deliberate breakage, every kind in turn (each must be rejected with exit code 2)
+    c.malformed = KINDS[Math.floor(i / 10) % KINDS.length];
     c.inputs = c.inputs || { frames: [{ tick: 0 }] };
     c.scenario = c.scenario || {};
     if (c.malformed === 'tick-order') c.inputs.frames.push({ tick: 0 });
@@ -68,7 +76,7 @@ function runCase(c, dir) {
 export function fuzz({ n = 300, seed = 2026, deterministicSample = 30 } = {}) {
   const r = rng(seed);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-fuzz-'));
-  const res = { n, seed, valid: 0, malformed: 0, crashes: 0, deterministicChecked: 0, failures: [], byMalformedKind: {} };
+  const res = { n, seed, valid: 0, malformed: 0, crashes: 0, deterministicChecked: 0, failures: [], byMalformedKind: {}, coverage: { night2: 0, pause: 0, dash: 0, big: 0, won: 0, lost_no_flames: 0, lost_dawn: 0 } };
   const t0 = performance.now();
   for (let i = 0; i < n; i++) {
     const c = makeCase(r, i);
@@ -81,6 +89,10 @@ export function fuzz({ n = 300, seed = 2026, deterministicSample = 30 } = {}) {
     res.valid++;
     if (out.code !== 0) { res.crashes++; res.failures.push({ i, why: `exit ${out.code}: ${out.stderr.slice(0, 200)}` }); continue; }
     const lines = out.text.trim().split('\n').map((l) => JSON.parse(l));
+    const cov = res.coverage, has = (n) => lines.some((l) => l.type === 'event' && l.name === n), go = lines.find((l) => l.name === 'game_over');
+    if (c.night === 2) cov.night2++; if (has('pause')) cov.pause++; if (has('dash')) cov.dash++;
+    if (lines.some((l) => l.type === 'snapshot' && l.shades.some((s) => s.kind === 'big'))) cov.big++;
+    if (go) cov[go.data.result === 'won' ? 'won' : `lost_${go.data.reason}`]++;
     const bad = checkRun(lines);
     if (bad.length) res.failures.push({ i, night: c.night, why: bad.slice(0, 3) });
     if (res.deterministicChecked < deterministicSample) {
