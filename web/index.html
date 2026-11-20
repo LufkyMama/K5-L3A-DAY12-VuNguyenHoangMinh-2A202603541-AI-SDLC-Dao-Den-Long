@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đảo Đèn Lồng</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0716; font-family: system-ui, sans-serif; color: #ffe9c4; }
+  canvas { display: block; }
+  #hud { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; gap: 10px; flex-wrap: wrap; pointer-events: none; }
+  .chip { background: rgba(20, 10, 35, .72); border: 1px solid rgba(255, 190, 110, .35); border-radius: 10px; padding: 6px 12px; font-size: 15px; }
+  .chip b { color: #ffc46b; }
+  #hint { position: fixed; bottom: 70px; width: 100%; text-align: center; font-size: 18px; text-shadow: 0 0 8px #000; pointer-events: none; }
+  #help { position: fixed; bottom: 12px; left: 12px; font-size: 13px; opacity: .75; pointer-events: none; }
+  #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(8, 4, 18, .78); }
+  #overlay .card { max-width: 520px; padding: 28px 32px; background: #1a1030; border: 1px solid #ffb35c66; border-radius: 16px; text-align: center; line-height: 1.5; }
+  #overlay h1 { margin: 0 0 8px; color: #ffc46b; }
+  button { margin-top: 14px; font-size: 18px; padding: 10px 26px; border-radius: 10px; border: 0; background: #ffb35c; color: #2a1405; cursor: pointer; }
+  .hidden { display: none !important; }
+  #flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle, transparent 40%, rgba(120, 30, 160, .55)); opacity: 0; transition: opacity .25s; }
+</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.js" } }</script>
+</head>
+<body>
+<div id="hud">
+  <div class="chip">Lửa <b id="h-flames"></b></div>
+  <div class="chip">Đom đóm <b id="h-carried"></b></div>
+  <div class="chip">Đèn <b id="h-lit"></b></div>
+  <div class="chip">Điểm <b id="h-score"></b></div>
+  <div class="chip">Bình minh sau <b id="h-time"></b></div>
+  <div class="chip">Tỏa sáng <b id="h-pulse"></b></div>
+</div>
+<div id="hint"></div>
+<div id="help">WASD di chuyển · Chuột kéo / ← → xoay camera · Space nhảy · E nạp đèn · F tỏa sáng · R chơi lại</div>
+<div id="flash"></div>
+<div id="overlay">
+  <div class="card" id="card">
+    <h1>Đảo Đèn Lồng</h1>
+    <p>Đêm 1 – Đảo Bến. Sương đen đã nuốt ánh sáng của đảo.<br>
+      Giúp <b>Mây</b> gom đom đóm và thắp lại <b>5 Đèn Lồng Lớn</b> trước bình minh.<br>
+      Tránh <b>Bóng Mực</b>; nhấn <b>F</b> để tỏa sáng xua chúng (tốn 1 đom đóm). Bóng Mực không dám lại gần đèn.</p>
+    <button id="start">Bắt đầu</button>
+  </div>
+</div>
+<script type="module" src="/main.js"></script>
+</body>
+</html>
