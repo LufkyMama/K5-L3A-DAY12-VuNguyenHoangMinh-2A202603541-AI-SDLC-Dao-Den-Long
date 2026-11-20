@@ -117,6 +117,22 @@ if (Number(PHASE) >= 2) {
   winsByNight[2] = w2;
 }
 
+// ---- Phase 3 (Ticket-03): pause + dash, and regression against the phase-2 tag ----
+if (Number(PHASE) >= 3) {
+  check('P3-2 Pause delays dawn by the paused ticks', 'p3-pause-dawn',
+    { ticks: 500, scenario: f('p3-pause-dawn.scenario.json'), inputs: f('p3-pause-dawn.inputs.json'), every: 10 },
+    'paused ticks 0–29 (30 ticks) → dawn at tick 60 + 30 = 90; snapshots at t10/t20 have sim_tick 0, paused true',
+    (r) => ev(r, 'game_over')[0]?.tick === 90 && ev(r, 'game_over')[0].data.reason === 'dawn' && r.snaps.find((s) => s.tick === 20).sim_tick === 0 && r.snaps.find((s) => s.tick === 20).paused === true);
+  const dashD = contract.tuning.player_speed * contract.tuning.dash_speed_mult * contract.tuning.dash_duration_s;
+  check('P3-4/P3-5 Dash distance and cooldown', 'p3-dash',
+    { ticks: 200, scenario: f('p3-dash.scenario.json'), inputs: f('p3-dash.inputs.json'), every: 1 },
+    `dash events at t1 and t121 only (t61 is inside the 120-tick cooldown); after 12 ticks z = ${dashD.toFixed(1)} m`,
+    (r) => JSON.stringify(ev(r, 'dash').map((e) => e.tick)) === '[1,121]' && Math.abs(r.snaps.find((s) => s.tick === 12).player.pos[2] - dashD) < 1e-3);
+  const rg = spawnSync(process.execPath, ['tools/regress.mjs', 'phase-2', '--drop=paused', '--skip=p3-'], { cwd: ROOT, encoding: 'utf8' });
+  const rgLine = (rg.stdout.trim().split(/\r?\n/).at(-1) || rg.stderr).trim();
+  rows.push({ req: 'P3-7 No pause/dash → identical to the phase-2 tag', name: 'regress-phase-2', cmd: 'node tools/regress.mjs phase-2 --drop=paused --skip=p3-', expect: 'every case identical (only the new "paused" field ignored)', got: rgLine, ok: rg.status === 0, file: '-' });
+}
+
 // ---- determinism ----
 const a = headless('determinism-a', { seed: 42, ticks: 18000, inputs: apFile, every: 10 });
 const b = headless('determinism-b', { seed: 42, ticks: 18000, inputs: apFile, every: 10 });

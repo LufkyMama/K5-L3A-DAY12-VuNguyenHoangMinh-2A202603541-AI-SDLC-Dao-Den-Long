@@ -53,7 +53,7 @@ const t0 = Date.now();
 const lines = [];
 const log = (s) => { const l = `[${((Date.now() - t0) / 1000).toFixed(1)}s] ${s}`; lines.push(l); console.log(l); };
 const shot = async (name) => { const r = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(r.result.data, 'base64')); };
-const KEYS = { KeyW: ['w', 87], KeyA: ['a', 65], KeyS: ['s', 83], KeyD: ['d', 68], KeyE: ['e', 69], KeyF: ['f', 70], KeyR: ['r', 82], Space: [' ', 32] };
+const KEYS = { KeyP: ['p', 80], ShiftLeft: ['Shift', 16], KeyW: ['w', 87], KeyA: ['a', 65], KeyS: ['s', 83], KeyD: ['d', 68], KeyE: ['e', 69], KeyF: ['f', 70], KeyR: ['r', 82], Space: [' ', 32] };
 const held = new Set();
 const keyDown = async (code) => { if (held.has(code)) return; held.add(code); await send('Input.dispatchKeyEvent', { type: 'keyDown', code, key: KEYS[code][0], windowsVirtualKeyCode: KEYS[code][1] }); };
 const keyUp = async (code) => { if (!held.has(code)) return; held.delete(code); await send('Input.dispatchKeyEvent', { type: 'keyUp', code, key: KEYS[code][0], windowsVirtualKeyCode: KEYS[code][1] }); };
@@ -67,7 +67,7 @@ const clickEl = async (elId) => {
 const state = () => ev(`(() => { const g = window.__game(); if (!g) return null; return { st: g.state, res: g.result, score: g.score, t: g.timeLeft,
   p: g.player.pos.slice(), fl: g.player.flames, c: g.player.carried, lit: g.lanterns.filter((l) => l.lit).length,
   L: g.lanterns.map((l) => ({ id: l.id, pos: l.pos, lit: l.lit, dep: l.deposited })), M: g.motes.map((m) => m.pos),
-  S: g.shades.map((s) => ({ pos: s.pos, st: s.state, kind: s.kind })), cd: g.pulseCooldown,
+  S: g.shades.map((s) => ({ pos: s.pos, st: s.state, kind: s.kind })), cd: g.pulseCooldown, paused: g.paused, dcd: g.dashCooldown, sim: g.steps, pausedOverlay: !document.getElementById('paused')?.classList.contains('hidden'),
   hud: [...document.querySelectorAll('#hud b')].map((b) => b.textContent).join(' | '), hint: document.getElementById('hint').textContent,
   overlay: !document.getElementById('overlay').classList.contains('hidden'), card: document.getElementById('card').innerText.replace(/\\n+/g, ' / ') }; })()`);
 
@@ -95,6 +95,22 @@ try {
   await tap('Space'); await sleep(150); s = await state();
   check('Space jumps', s.p[1] > 0.3, `y=${s.p[1].toFixed(2)} m shortly after Space`);
   await sleep(800);
+
+  // ---- Phase 3: pause (P) and dash (Shift) with real keys ----
+  if (Number(PHASE) >= 3) {
+    await tap('KeyP'); await sleep(300); const p1 = await state(); await shot('p3-paused');
+    await keyDown('KeyW'); await sleep(1000); await keyUp('KeyW'); const p2 = await state();
+    check('P3-9 P pauses: overlay shown, sim_tick, time and position frozen for 1 s while W is held',
+      p1.paused && p1.pausedOverlay && p2.sim === p1.sim && p2.t === p1.t && d2(p2.p, p1.p) === 0,
+      `paused=${p1.paused}, overlay=${p1.pausedOverlay}, sim_tick ${p1.sim}→${p2.sim}, time ${p1.t.toFixed(2)}→${p2.t.toFixed(2)}`);
+    await tap('KeyP'); await sleep(300); const p3 = await state();
+    check('P3-9 P again resumes', !p3.paused && !p3.pausedOverlay && p3.sim > p2.sim, `paused=${p3.paused}, sim_tick ${p2.sim}→${p3.sim}`);
+    const a0 = await state(); await keyDown('KeyW'); await sleep(50); await tap('ShiftLeft'); await sleep(250); await keyUp('KeyW'); const a1 = await state();
+    // ~0.3 s of W: walking alone covers ~1.8 m; a dash adds player_speed×(mult−1)×duration = 2.4 m more
+    check('P3-9 Shift dashes (distance clearly above walking, cooldown started)', d2(a1.p, a0.p) > 3 && a1.dcd > 0,
+      `moved ${d2(a1.p, a0.p).toFixed(2)} m in ~0.3 s with W+Shift (walking ≈ 1.8 m), dash cooldown ${a1.dcd} ticks`);
+    await sleep(500);
+  }
 
   // play to the end with W/A/S/D + E + F
   const steer = async (dx, dz) => {
