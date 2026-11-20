@@ -103,8 +103,8 @@ if (Number(PHASE) >= 2) {
     (r) => r.snaps[0].shades[0].kind === 'big' && Math.abs(r.snaps.at(-1).shades[0].pos[0] - (20 - contract.tuning.big_shade_speed)) < 1e-3);
   check('P2-5 CR-1: an unlit lantern gives no protection', 'p2-cr1-unlit-lantern',
     { ticks: 300, scenario: f('p2-cr1-unlit-lantern.scenario.json'), every: 1 },
-    'player stands at unlit L1; shade walks in and hits (player_hit present)',
-    (r) => ev(r, 'player_hit').length >= 1);
+    'player stands at unlit L1; shade enters its 4 m circle (min distance < 4) and hits',
+    (r) => ev(r, 'player_hit').length >= 1 && Math.min(...r.snaps.flatMap((s) => s.shades.map((x) => dist(x.pos, [0, 0, 25])))) < contract.tuning.safe_radius);
   const ap2 = autopilot(AP_SEED, 2);
   const ap2File = path.join(SC, `autopilot-night2-seed${AP_SEED}.inputs.json`);
   fs.writeFileSync(ap2File, JSON.stringify({ frames: ap2.frames }) + '\n');

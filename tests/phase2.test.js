@@ -19,7 +19,8 @@ test('P2-1 night 2 layout: night field, 6 lanterns L1..L6 on a 28 m ring, 360 s'
   assert.equal(s.night, 2);
   assert.deepEqual(s.lanterns.map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5', 'L6']);
   for (const l of s.lanterns) near(Math.hypot(l.pos[0], l.pos[2]), 28, 0.01);
-  assert.deepEqual(s.lanterns[0].pos, [0, 0, 28]);
+  // L(i+1) at angle i·60°: x = 28·sin, z = 28·cos
+  s.lanterns.forEach((l, i) => { const a = (i * Math.PI) / 3; near(l.pos[0], 28 * Math.sin(a)); near(l.pos[2], 28 * Math.cos(a)); });
   assert.equal(s.time_left_s, T.night2_duration_s);
   assert.equal(headless({ scenario: quiet(), ticks: 0 }).snaps[0].night, 1);
 });
@@ -65,6 +66,10 @@ test('P2-4 default night 2: every third spawned shade is big; night 1 never spaw
   const last = r.snaps.at(-1);
   const kinds = Object.fromEntries(last.shades.map((s) => [s.id, s.kind]));
   assert.equal(kinds[ids[0]], 'ink'); assert.equal(kinds[ids[1]], 'ink'); assert.equal(kinds[ids[2]], 'big');
+  const long = headless({ night: 2, scenario: safe, ticks: 60 * 70, every: 60 * 70 });
+  const k6 = long.snaps.at(-1).shades.map((x) => x.kind);
+  assert.equal(k6.length, 6); // shadeMax on night 2
+  assert.deepEqual(k6, ['ink', 'ink', 'big', 'ink', 'ink', 'big']);
   const n1 = headless({ night: 1, scenario: { player: { pos: [0, 0, 25] }, lanterns: [{ id: 'L1', lit: true }] }, ticks: 60 * 60, every: 60 * 60 });
   assert.ok(n1.snaps.at(-1).shades.length >= 3);
   assert.ok(n1.snaps.at(-1).shades.every((s) => s.kind === 'ink'));
@@ -89,11 +94,32 @@ test('P2-6 lantern ids depend on the night; bad kind / night are rejected', () =
   assert.equal(headless({ night: 2, scenario: { lanterns: [{ id: 'L6', lit: true }] }, ticks: 1 }).code, 0);
   assert.equal(headless({ night: 1, scenario: { lanterns: [{ id: 'L6', lit: true }] }, ticks: 1 }).code, 2);
   assert.equal(headless({ night: 2, scenario: { shades: [{ pos: [5, 1, 5], kind: 'giant' }] }, ticks: 1 }).code, 2);
-  assert.notEqual(headless({ night: 3, ticks: 1 }).code, 0);
+  assert.equal(headless({ night: 3, ticks: 1 }).code, 1); // usage error, not a file-format error
 });
 
 test('night 2 is deterministic too', () => {
   const a = headless({ night: 2, seed: 9, ticks: 3000, inputs: { frames: [{ tick: 0, move: [0.4, 1] }] } });
   const b = headless({ night: 2, seed: 9, ticks: 3000, inputs: { frames: [{ tick: 0, move: [0.4, 1] }] } });
   assert.equal(a.text, b.text);
+});
+
+test('P2-5 CR-1: a STUNNED shade inside an unlit circle is pushed out when that lantern is lit', () => {
+  const r = headless({
+    scenario: quiet({ player: { pos: [0, 0, 23], carried: 6 }, lanterns: [{ id: 'L1', pos: [0, 0, 25] }], shades: [{ id: 'A', pos: [0, 1, 23.5] }] }), // pulse pushes it 4 m away from the player to z=27.5: still 2.5 m from L1
+    inputs: { frames: [{ tick: 0, pulse: true }, { tick: 1, pulse: false }, { tick: 5, interact: true }] }, ticks: 6, every: 1,
+  });
+  assert.equal(r.snapAt(5).shades[0].state, 'stunned');
+  assert.ok(distXZ(r.snapAt(5).shades[0].pos, [0, 0, 25]) < T.safe_radius); // unlit: no protection yet
+  assert.equal(r.ev('lantern_lit')[0].tick, 6);
+  assert.ok(distXZ(r.snapAt(6).shades[0].pos, [0, 0, 25]) >= T.safe_radius);
+});
+
+test('P2-3 big shade hit radius holds off-origin on a diagonal', () => {
+  // player at (10,0,10); big shade 1.6 m away along (0.6, 0.8) after its first chase step
+  const reach = T.big_shade_hit_radius + T.big_shade_speed / 60;
+  const at = (d) => [10 + 0.6 * d, 1, 10 + 0.8 * d];
+  const hit = headless({ night: 2, scenario: quiet({ player: { pos: [10, 0, 10] }, shades: [{ kind: 'big', pos: at(reach) }] }), ticks: 1 });
+  assert.equal(hit.ev('player_hit').length, 1);
+  const miss = headless({ night: 2, scenario: quiet({ player: { pos: [10, 0, 10] }, shades: [{ kind: 'big', pos: at(reach + 0.01) }] }), ticks: 1 });
+  assert.equal(miss.ev('player_hit').length, 0);
 });
