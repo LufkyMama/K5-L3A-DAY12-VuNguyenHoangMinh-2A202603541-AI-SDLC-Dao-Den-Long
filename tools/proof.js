@@ -20,9 +20,9 @@ const contract = JSON.parse(fs.readFileSync(path.join(ROOT, 'game.contract.json'
 const [cmd, ...cmdArgs] = contract.headless_cmd.split(' ');
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
-function headless(name, { seed = 1, ticks, scenario, inputs, every = 60 }) {
+function headless(name, { seed = 1, night = 1, ticks, scenario, inputs, every = 60 }) {
   const out = path.join(RUNS, `${name}.jsonl`);
-  const args = [...cmdArgs, '--seed', String(seed), '--night', '1', '--ticks', String(ticks), '--out', out, '--snapshot-every', String(every)];
+  const args = [...cmdArgs, '--seed', String(seed), '--night', String(night), '--ticks', String(ticks), '--out', out, '--snapshot-every', String(every)];
   if (scenario) args.push('--scenario', scenario);
   if (inputs) args.push('--inputs', inputs);
   const t0 = performance.now();
@@ -73,7 +73,7 @@ check('Night ends at dawn (lost)', 's06-dawn',
   { ticks: 1000, scenario: f('s06-dawn.scenario.json') },
   'game_over lost/dawn at t120 (time_left_s 2)',
   (r) => ev(r, 'game_over')[0]?.tick === 120 && ev(r, 'game_over')[0].data.reason === 'dawn');
-check('Shades cannot enter safe_radius of a lantern', 's07-safe-zone',
+check('Shades cannot enter safe_radius of a LIT lantern (CR-1 updated in Phase 2)', 's07-safe-zone',
   { ticks: 1200, scenario: f('s07-safe-zone.scenario.json'), every: 1 },
   'over 1200 ticks: min shade–L1 distance ≥ 4, no player_hit',
   (r) => ev(r, 'player_hit').length === 0 && Math.min(...r.snaps.slice(1).flatMap((s) => s.shades.map((x) => dist(x.pos, [0, 0, 25])))) >= 4);
@@ -89,6 +89,33 @@ const full = check('Night 1 playable start → win (default night, random motes 
   (r) => r.end.state === 'won' && ev(r, 'lantern_lit').length === 5 && ev(r, 'shade_spawned').length >= 1);
 let wins = 0; const N = 20;
 for (let s = 1; s <= N; s++) if (autopilot(s).state === 'won') wins++;
+const winsByNight = { 1: wins };
+
+// ---- Phase 2 (Ticket-02): Night 2, Bóng Mực Lớn, CR-1 ----
+if (Number(PHASE) >= 2) {
+  check('P2-2 Night 2 needs all 6 lanterns; win bonus', 'p2-night2-win',
+    { night: 2, ticks: 600, scenario: f('p2-night2-win.scenario.json'), inputs: f('p2-night2-win.inputs.json'), every: 1 },
+    'snapshot night 2 with L1..L6; lighting L1 (5 others pre-lit) → won/all_lit at t1; score 100 + 2×floor(360−1/60) + 50×3 = 968',
+    (r) => r.snaps[0].night === 2 && r.snaps[0].lanterns.length === 6 && ev(r, 'game_over')[0]?.tick === 1 && r.end.state === 'won' && r.end.score === 968);
+  check('P2-3 Bóng Mực Lớn speed', 'p2-big-shade',
+    { night: 2, ticks: 60, scenario: f('p2-big-shade.scenario.json'), every: 60 },
+    'kind "big"; after 60 ticks x = 20 − big_shade_speed (2.5) = 17.5',
+    (r) => r.snaps[0].shades[0].kind === 'big' && Math.abs(r.snaps.at(-1).shades[0].pos[0] - (20 - contract.tuning.big_shade_speed)) < 1e-3);
+  check('P2-5 CR-1: an unlit lantern gives no protection', 'p2-cr1-unlit-lantern',
+    { ticks: 300, scenario: f('p2-cr1-unlit-lantern.scenario.json'), every: 1 },
+    'player stands at unlit L1; shade walks in and hits (player_hit present)',
+    (r) => ev(r, 'player_hit').length >= 1);
+  const ap2 = autopilot(AP_SEED, 2);
+  const ap2File = path.join(SC, `autopilot-night2-seed${AP_SEED}.inputs.json`);
+  fs.writeFileSync(ap2File, JSON.stringify({ frames: ap2.frames }) + '\n');
+  check('P2-7 Night 2 playable start → win (default night 2)', `autopilot-night2-seed${AP_SEED}`,
+    { night: 2, seed: AP_SEED, ticks: 21600, inputs: ap2File },
+    'replay ends won/all_lit; 6 lantern_lit; at least one big shade spawned',
+    (r) => r.end.state === 'won' && ev(r, 'lantern_lit').length === 6 && r.snaps.some((s) => s.shades.some((x) => x.kind === 'big')));
+  let w2 = 0;
+  for (let s = 1; s <= N; s++) if (autopilot(s, 2).state === 'won') w2++;
+  winsByNight[2] = w2;
+}
 
 // ---- determinism ----
 const a = headless('determinism-a', { seed: 42, ticks: 18000, inputs: apFile, every: 10 });
@@ -132,7 +159,7 @@ ${rows.map((r) => `| ${r.req} | \`${r.cmd}\` | ${r.expect} | ${r.got} | ${r.ok ?
 
 ## 3. Playability
 
-- Autopilot (greedy bot in \`tools/autopilot.js\`) wins the default Night 1 on **${wins}/${N}** seeds (seeds 1..${N}).
+- Autopilot (greedy bot in \`tools/autopilot.js\`) wins the default nights on seeds 1..${N}: ${Object.entries(winsByNight).map(([n, w]) => `Night ${n} **${w}/${N}**`).join(', ')}.
 - Seed ${AP_SEED} full run: ${full.end.state} after ${full.end.ticks} ticks (${(full.end.ticks / 60).toFixed(1)} s), score ${full.end.score}.
 
 ## 4. Speed
@@ -155,5 +182,5 @@ See [playtest/PLAYTEST.md](playtest/PLAYTEST.md) (\`npm run playtest -- ${PHASE}
 fs.writeFileSync(path.join(OUT, 'REPORT.md'), md);
 console.log(`proof: ${allOk ? 'PASS' : 'FAIL'} → ${rel(path.join(OUT, 'REPORT.md'))}`);
 for (const r of rows) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.name}`);
-console.log(`autopilot wins ${wins}/${N}; tests: ${tsum}`);
+console.log(`autopilot wins ${JSON.stringify(winsByNight)} of ${N}; tests: ${tsum}`);
 process.exit(allOk ? 0 : 1);

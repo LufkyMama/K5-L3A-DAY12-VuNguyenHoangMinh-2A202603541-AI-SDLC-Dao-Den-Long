@@ -2,12 +2,12 @@
 // Used as evidence that Night 1 is winnable end-to-end; the recorded file is then replayed
 // through the real headless CLI (tools/proof.js) so the proof does not depend on this code.
 import { Game } from '../src/sim.js';
-import { TUNING as T } from '../src/tuning.js';
+import { TUNING as T, NIGHTS } from '../src/tuning.js';
 
 const d2 = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
-export function autopilot(seed, maxTicks = T.night1_duration_s * 60) {
-  const g = new Game({ seed });
+export function autopilot(seed, night = 1, maxTicks = NIGHTS[night].duration * 60) {
+  const g = new Game({ seed, night });
   const frames = [];
   let last = {};
   let interactHeld = false, pulseHeld = false;
@@ -23,7 +23,7 @@ export function autopilot(seed, maxTicks = T.night1_duration_s * 60) {
 
     let dir = [target[0] - p.pos[0], target[2] - p.pos[2]];
     // flee/steer away from close active shades
-    const threats = g.shades.filter((s) => s.state !== 'stunned' && d2(s.pos, p.pos) < 4.5);
+    const threats = g.shades.filter((s) => s.state !== 'stunned' && d2(s.pos, p.pos) < (s.kind === 'big' ? 5.5 : 4.5));
     let pulse = false;
     if (threats.length) {
       if (p.carried >= T.pulse_cost && g.pulseCooldown === 0 && !pulseHeld) pulse = true;
@@ -49,6 +49,6 @@ export function autopilot(seed, maxTicks = T.night1_duration_s * 60) {
 }
 
 if (process.argv[1]?.replace(/\\/g, '/').endsWith('tools/autopilot.js') && process.argv[2]) {
-  const r = autopilot(Number(process.argv[2]));
+  const r = autopilot(Number(process.argv[2]), Number(process.argv[3] || 1));
   console.log(JSON.stringify({ state: r.state, result: r.result, score: r.score, ticks: r.ticks, frames: r.frames.length }));
 }

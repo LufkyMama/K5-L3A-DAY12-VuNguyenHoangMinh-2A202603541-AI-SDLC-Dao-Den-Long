@@ -67,7 +67,7 @@ const clickEl = async (elId) => {
 const state = () => ev(`(() => { const g = window.__game(); if (!g) return null; return { st: g.state, res: g.result, score: g.score, t: g.timeLeft,
   p: g.player.pos.slice(), fl: g.player.flames, c: g.player.carried, lit: g.lanterns.filter((l) => l.lit).length,
   L: g.lanterns.map((l) => ({ id: l.id, pos: l.pos, lit: l.lit, dep: l.deposited })), M: g.motes.map((m) => m.pos),
-  S: g.shades.map((s) => ({ pos: s.pos, st: s.state })), cd: g.pulseCooldown,
+  S: g.shades.map((s) => ({ pos: s.pos, st: s.state, kind: s.kind })), cd: g.pulseCooldown,
   hud: [...document.querySelectorAll('#hud b')].map((b) => b.textContent).join(' | '), hint: document.getElementById('hint').textContent,
   overlay: !document.getElementById('overlay').classList.contains('hidden'), card: document.getElementById('card').innerText.replace(/\\n+/g, ' / ') }; })()`);
 
@@ -103,36 +103,50 @@ try {
     if (dx / n > 0.38) want.add('KeyA'); if (dx / n < -0.38) want.add('KeyD');
     for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) await (want.has(k) ? keyDown(k) : keyUp(k));
   };
-  let firstPick = null, firstDep = null, firstPulse = null, winDep = null, sawShade = false, shotMid = false;
-  while (Date.now() - t0 < 240000) {
-    s = await state();
-    if (!s || s.st !== 'playing') break;
-    if (s.S.length) sawShade = true;
-    if (!firstPick && s.c > 0) { firstPick = s; await shot('02-pickup'); }
-    if (!shotMid && s.lit >= 3) { shotMid = true; await shot('05-three-lit'); }
-    const L = s.L.filter((l) => !l.lit).reduce((b, l) => (!b || d2(s.p, l.pos) < d2(s.p, b.pos) ? l : b), null);
-    let target = (s.c >= Math.min(5 - L.dep, 5) || (s.c > 0 && !s.M.length)) ? L.pos
-      : (s.M.reduce((b, m) => (!b || d2(s.p, m) < d2(s.p, b) ? m : b), null) || [0, 0, 0]);
-    const threats = s.S.filter((x) => x.st !== 'stunned' && d2(x.pos, s.p) < 4.5);
-    if (threats.length && s.c >= 1 && s.cd === 0) {
-      await tap('KeyF'); await sleep(80); const b = await state();
-      log(`F (pulse): carried ${s.c}→${b.c}, shades ${b.S.map((x) => x.st).join(',')}, score ${s.score}→${b.score}`);
-      if (!firstPulse) { firstPulse = { before: s, after: b }; await shot('04-pulse'); }
-      continue;
+  // Steer with W/A/S/D toward fireflies / the nearest unlit lantern, E to deposit, F when a shade is close.
+  async function playToEnd(prefix, budgetMs) {
+    const o = { firstPick: null, firstDep: null, firstPulse: null, winDep: null, sawShade: false, sawBig: false };
+    let shotMid = false; const tStart = Date.now();
+    while (Date.now() - tStart < budgetMs) {
+      s = await state();
+      if (!s || s.st !== 'playing') break;
+      if (s.S.length) o.sawShade = true;
+      if (s.S.some((x) => x.kind === 'big')) o.sawBig = true;
+      if (!o.firstPick && s.c > 0) { o.firstPick = s; await shot(`${prefix}02-pickup`); }
+      if (!shotMid && s.lit >= 3) { shotMid = true; await shot(`${prefix}05-three-lit`); }
+      const L = s.L.filter((l) => !l.lit).reduce((b, l) => (!b || d2(s.p, l.pos) < d2(s.p, b.pos) ? l : b), null);
+      const target = (s.c >= Math.min(5 - L.dep, 5) || (s.c > 0 && !s.M.length)) ? L.pos
+        : (s.M.reduce((b, m) => (!b || d2(s.p, m) < d2(s.p, b) ? m : b), null) || [0, 0, 0]);
+      const threats = s.S.filter((x) => x.st !== 'stunned' && d2(x.pos, s.p) < (x.kind === 'big' ? 5.5 : 4.5));
+      if (threats.length && s.c >= 1 && s.cd === 0) {
+        await tap('KeyF'); await sleep(80); const b = await state();
+        log(`F (pulse): carried ${s.c}→${b.c}, shades ${b.S.map((x) => x.st).join(',')}, score ${s.score}→${b.score}`);
+        if (!o.firstPulse) { o.firstPulse = { before: s, after: b }; await shot(`${prefix}04-pulse`); }
+        continue;
+      }
+      let dx = target[0] - s.p[0], dz = target[2] - s.p[2];
+      for (const t of threats) { const dd = Math.max(0.3, d2(t.pos, s.p)); dx += ((s.p[0] - t.pos[0]) / dd) * 12; dz += ((s.p[2] - t.pos[2]) / dd) * 12; }
+      if (target === L.pos && d2(s.p, L.pos) <= 2.2 && s.c > 0) {
+        await steer(0, 0); await tap('KeyE'); await sleep(80); const b = await state();
+        log(`E (deposit) at ${L.id}: carried ${s.c}→${b.c}, lit ${s.lit}→${b.lit}/${s.L.length}, score ${s.score}→${b.score}`);
+        if (b.st === 'won') o.winDep = { before: s, after: b };
+        if (!o.firstDep) { o.firstDep = { before: s, after: b }; await sleep(300); await shot(`${prefix}03-first-lantern-lit`); }
+        continue;
+      }
+      await steer(dx, dz);
+      await sleep(40);
     }
-    let dx = target[0] - s.p[0], dz = target[2] - s.p[2];
-    for (const t of threats) { const dd = Math.max(0.3, d2(t.pos, s.p)); dx += ((s.p[0] - t.pos[0]) / dd) * 12; dz += ((s.p[2] - t.pos[2]) / dd) * 12; }
-    if (target === L.pos && d2(s.p, L.pos) <= 2.2 && s.c > 0) {
-      await steer(0, 0); await tap('KeyE'); await sleep(80); const b = await state();
-      log(`E (deposit) at ${L.id}: carried ${s.c}→${b.c}, lit ${s.lit}→${b.lit}/5, score ${s.score}→${b.score}`);
-      if (b.st === 'won') winDep = { before: s, after: b };
-      if (!firstDep) { firstDep = { before: s, after: b }; await sleep(300); await shot('03-first-lantern-lit'); }
-      continue;
-    }
-    await steer(dx, dz);
-    await sleep(40);
+    for (const k of [...held]) await keyUp(k);
+    return o;
   }
-  for (const k of [...held]) await keyUp(k);
+  const winBonusCheck = (name, winDep) => {
+    if (!winDep) return check(name, false, 'game was not won by a deposit');
+    // README scoring: last lantern +100, then on win +2 per whole second left and +50 per flame left
+    const exp = winDep.before.score + 100 + 2 * Math.floor(winDep.after.t) + 50 * winDep.after.fl;
+    check(name, winDep.after.score === exp,
+      `score before last deposit ${winDep.before.score} + 100 + 2×floor(${winDep.after.t.toFixed(2)}) + 50×${winDep.after.fl} = ${exp}; game shows ${winDep.after.score}`);
+  };
+  const { firstPick, firstDep, firstPulse, winDep, sawShade } = await playToEnd('', 200000);
   check('Fireflies are picked up on contact (+10, HUD updates)', firstPick && firstPick.score === 10 * firstPick.c && firstPick.hud.includes(`${firstPick.c}/5`), firstPick ? `carried ${firstPick.c}, score ${firstPick.score}, HUD: ${firstPick.hud}` : 'never picked');
   check('E near a lantern deposits; 5 fireflies light it (+100)', firstDep && firstDep.after.lit === firstDep.before.lit + 1 && firstDep.after.c === firstDep.before.c - 5 && firstDep.before.hint.startsWith('Nhấn E'),
     firstDep ? `hint "${firstDep.before.hint}", carried ${firstDep.before.c}→${firstDep.after.c}, lit ${firstDep.before.lit}→${firstDep.after.lit}` : 'no deposit');
@@ -140,13 +154,8 @@ try {
   check('F pulse costs 1 firefly and stuns nearby Bóng Mực', firstPulse && firstPulse.after.c === firstPulse.before.c - 1 && firstPulse.after.S.some((x) => x.st === 'stunned'),
     firstPulse ? `carried ${firstPulse.before.c}→${firstPulse.after.c}, states ${firstPulse.after.S.map((x) => x.st).join(',')}` : 'no pulse happened (no shade came close)');
   await sleep(1500); s = await state(); await shot('06-end-win');
-  check('Lighting all 5 lanterns wins and shows the end screen', s.st === 'won' && s.overlay && s.card.includes('Đảo đã sáng lại'), `result ${JSON.stringify(s.res)}, score ${s.score}, card "${s.card}"`);
-  if (winDep) {
-    // README scoring: last lantern +100, then on win +2 per whole second left and +50 per flame left
-    const exp = winDep.before.score + 100 + 2 * Math.floor(winDep.after.t) + 50 * winDep.after.fl;
-    check('Win bonus matches README scoring', winDep.after.score === exp,
-      `score before last deposit ${winDep.before.score} + 100 + 2×floor(${winDep.after.t.toFixed(2)}) + 50×${winDep.after.fl} = ${exp}; game shows ${winDep.after.score}`);
-  } else check('Win bonus matches README scoring', false, 'game was not won by a deposit');
+  check('Lighting all lanterns of Night 1 wins and shows the end screen', s.st === 'won' && s.overlay && s.card.includes('Đảo đã sáng lại'), `result ${JSON.stringify(s.res)}, score ${s.score}, card "${s.card}"`);
+  winBonusCheck('Win bonus matches README scoring', winDep);
 
   await tap('KeyR'); await sleep(500); s = await state();
   check('R restarts after a result', s.st === 'playing' && s.score === 0 && s.fl === 3 && s.lit === 0 && !s.overlay, `state ${s.st}, score ${s.score}, flames ${s.fl}, lit ${s.lit}`);
@@ -156,6 +165,19 @@ try {
   check('Standing still: Bóng Mực drain flames → lose screen', s.st === 'lost' && s.res.reason === 'no_flames' && s.card.includes('Thua rồi'), `after ${((Date.now() - tl) / 1000).toFixed(0)} s: ${JSON.stringify(s.res)}, card "${s.card}"`);
   await clickEl('again'); await sleep(500); s = await state();
   check('"Chơi lại" button restarts', s.st === 'playing' && s.fl === 3, `state ${s.st}, flames ${s.fl}`);
+
+  // ---- Phase 2: choose Night 2 on the start screen and play it to the end ----
+  if (Number(PHASE) >= 2) {
+    await send('Page.navigate', { url: `http://localhost:${webPort}/` }); await sleep(2500);
+    await clickEl('start2'); await sleep(800); s = await state();
+    check('P2-9 "Đêm 2" button starts Night 2 (6 lanterns, HUD shows night 2)', s?.st === 'playing' && s.L.length === 6 && s.hud.startsWith('2 |') && s.hud.includes('0/6'), `HUD: ${s?.hud}`);
+    await shot('n2-01-start');
+    const n2 = await playToEnd('n2-', 200000);
+    await sleep(1500); s = await state(); await shot('n2-06-end');
+    check('P2-9 Night 2 played with the keyboard to a win (all 6 lanterns)', s.st === 'won' && s.lit === 6 && s.card.includes('Đêm 2'), `result ${JSON.stringify(s.res)}, lit ${s.lit}/6, card "${s.card}"`);
+    check('P2-9 Bóng Mực Lớn appeared during Night 2', n2.sawBig, n2.sawBig ? 'a shade with kind "big" was on the island' : 'no big shade seen');
+    winBonusCheck('P2-9 Night 2 win bonus matches README scoring', n2.winDep);
+  }
   check('No JavaScript errors on the page', pageErrors.length === 0, pageErrors.length ? pageErrors.join(' ; ') : 'none');
 } catch (e) {
   check('Playtest ran to completion', false, e.stack || String(e));
