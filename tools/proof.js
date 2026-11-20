@@ -68,7 +68,7 @@ check('Pulse stuns only shades within pulse_radius', 's04-pulse-stun',
 check('Shade contact drains flames → lose (no_flames)', 's05-shade-hits-loss',
   { ticks: 2000, scenario: f('s05-shade-hits-loss.scenario.json') },
   '3 player_hit (first drops all 4 carried), hits ≥ 90 ticks apart, then game_over lost/no_flames',
-  (r) => { const h = ev(r, 'player_hit'); return h.length === 3 && h[0].data.dropped === 4 && h[1].tick - h[0].tick >= 90 && r.end.state === 'lost' && ev(r, 'game_over')[0].data.reason === 'no_flames'; });
+  (r) => { const h = ev(r, 'player_hit'); return h.length === 3 && h[0].data.dropped === 4 && h[1].tick - h[0].tick === Math.round(contract.tuning.invuln_s * 60) && r.end.state === 'lost' && ev(r, 'game_over')[0].data.reason === 'no_flames'; });
 check('Night ends at dawn (lost)', 's06-dawn',
   { ticks: 1000, scenario: f('s06-dawn.scenario.json') },
   'game_over lost/dawn at t120 (time_left_s 2)',
@@ -147,6 +147,10 @@ Full 300 s night with default fireflies, no shades (seed 7, 18000 ticks, snapsho
 | [gui-play.png](gui-play.png) | Mây (nón lá + hat lantern), fireflies, HUD (flames, carried, lanterns, score, time to dawn, pulse) |
 | [gui-shades.png](gui-shades.png) | Two Bóng Mực held at the edge of L1's safe circle (purple-black = danger) |
 | [gui-lit3.png](gui-lit3.png) | 3/5 lanterns lit: island and sky visibly brighter, lit lantern glows warm orange |
+
+## 6. GUI playtest with real keyboard/mouse
+
+See [playtest/PLAYTEST.md](playtest/PLAYTEST.md) (\`npm run playtest -- ${PHASE}\`, needs Chrome).
 `;
 fs.writeFileSync(path.join(OUT, 'REPORT.md'), md);
 console.log(`proof: ${allOk ? 'PASS' : 'FAIL'} → ${rel(path.join(OUT, 'REPORT.md'))}`);

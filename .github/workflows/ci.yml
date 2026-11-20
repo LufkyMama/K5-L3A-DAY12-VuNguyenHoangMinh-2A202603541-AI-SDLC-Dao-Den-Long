@@ -19,3 +19,20 @@ jobs:
           tail -n 1 out.jsonl
       - name: Evidence (proof report must PASS)
         run: npm run proof -- 1
+
+  playtest:
+    # Plays the browser build with real keyboard/mouse events in headless Chrome (preinstalled on the runner).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run playtest -- 1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playtest-phase-1
+          path: docs/proof/phase-1/playtest/

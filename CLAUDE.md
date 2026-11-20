@@ -6,6 +6,7 @@ Requirements: `docs/notes/phase-N.md` (copied from the lab board) + `game.contra
 ## Commands
 - Install: `npm install` · Play: `npm start` → http://localhost:8080
 - Tests: `npm test` (node:test, runs the real headless CLI) · Evidence: `npm run proof -- <phase>`
+- GUI playtest: `npm run playtest -- <phase>` (needs Chrome; starts its own server, plays with real key/mouse events, writes `docs/proof/phase-N/playtest/`)
 - Headless: `node src/headless.js --seed 1 --night 1 --ticks 600 --out out.jsonl [--scenario f] [--inputs f] [--snapshot-every n]`
 
 ## Layout
@@ -16,7 +17,8 @@ Requirements: `docs/notes/phase-N.md` (copied from the lab board) + `game.contra
 - `tests/`: behaviour tests through the CLI · `tests/scenarios/`: named scenario files · `tools/proof.js`: evidence report.
 
 ## Rules
-- Tick model: step k reads input of tick k → state k+1, events tagged k+1. Distances are XZ, "within r" is ≤ r.
+- Tick model: step k reads input of tick k → state k+1, events tagged k+1. Distances are XZ, "within r" is ≤ r: always use `within()` / `r + EPS` in sim.js, never a bare `<= r` (float error at exact radii).
+- Before tagging, run the `contract-reviewer` agent; every defect it finds gets a regression test that fails on the old code.
 - Creative extras must be gated by `creative` (GUI only); headless output must not change.
 - Expected values in tests come from the ticket/contract text, never from copying program output.
 - A Stop hook runs the tests and blocks finishing while they are red. Don't bypass it; fix the code.
