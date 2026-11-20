@@ -4,7 +4,8 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macOS/Linux are what the lab grades on; Windows is where the project is developed
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -14,6 +15,7 @@ jobs:
       - run: npm install
       - run: npm test
       - name: Headless smoke (contract command)
+        shell: bash
         run: |
           node src/headless.js --seed 1 --night 1 --ticks 600 --out out.jsonl
           tail -n 1 out.jsonl
